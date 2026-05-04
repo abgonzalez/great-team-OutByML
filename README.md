@@ -86,7 +86,7 @@ Para desplegar la aplicación de forma gratuita en [Streamlit Cloud](https://str
    - **Archivo principal:** `app.py`
 4. Haz clic en **Deploy** y espera a que la aplicación se construya.
 
-Tu aplicación estará disponible en una URL pública como: `https://tu-app.streamlit.app`
+Esta aplication esta publicada en: `https://outbyml.streamlit.app/`
 
 ## Estructura del proyecto
 
