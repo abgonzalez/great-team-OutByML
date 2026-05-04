@@ -1,0 +1,457 @@
+import streamlit as st
+import pandas as pd
+import requests
+import pydeck as pdk
+
+# ─── Page config ───────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="OutByML - Recomendador de Actividades",
+    page_icon="🌤️",
+    layout="wide",
+)
+
+# ─── Helper functions (adapted from CLI version) ──────────────────────────────
+
+
+def search_city(city_name, count=5):
+    url = "https://geocoding-api.open-meteo.com/v1/search"
+    params = {
+        "name": city_name,
+        "count": count,
+        "language": "es",
+        "format": "json",
+    }
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException:
+        st.error("Error al buscar la ciudad. Revisa tu conexión o intenta más tarde.")
+        return []
+
+    data = response.json()
+    if "results" not in data:
+        return []
+    return data["results"]
+
+
+def get_weather(latitude, longitude, timezone):
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "hourly": ",".join(
+            [
+                "temperature_2m",
+                "apparent_temperature",
+                "relative_humidity_2m",
+                "precipitation_probability",
+                "wind_speed_10m",
+                "wind_gusts_10m",
+                "cloud_cover",
+                "uv_index",
+            ]
+        ),
+        "forecast_days": 1,
+        "timezone": timezone,
+    }
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException:
+        st.error("Error al consultar el clima. Revisa tu conexión o intenta más tarde.")
+        return None
+    return response.json()
+
+
+def build_weather_dataframe(weather_data):
+    if weather_data is None:
+        return pd.DataFrame()
+    try:
+        if "hourly" not in weather_data:
+            return pd.DataFrame()
+        hourly_data = weather_data["hourly"]
+        df = pd.DataFrame(hourly_data)
+        df["time"] = pd.to_datetime(df["time"])
+        df["hour"] = df["time"].dt.hour
+    except Exception:
+        return pd.DataFrame()
+    return df
+
+
+ACTIVITIES = {
+    "Pasear": {
+        "start_hour": 7,
+        "end_hour": 22,
+        "ideal_temperature": 22,
+        "ideal_humidity": 50,
+        "ideal_wind": 5,
+        "ideal_uv": 4,
+        "rain_weight": 1.0,
+        "wind_weight": 1.0,
+        "humidity_weight": 1.0,
+        "uv_weight": 1.0,
+        "temperature_weight": 1.0,
+    },
+    "Turismo": {
+        "start_hour": 8,
+        "end_hour": 20,
+        "ideal_temperature": 21,
+        "ideal_humidity": 50,
+        "ideal_wind": 6,
+        "ideal_uv": 4,
+        "rain_weight": 1.2,
+        "wind_weight": 1.0,
+        "humidity_weight": 1.0,
+        "uv_weight": 1.0,
+        "temperature_weight": 1.2,
+    },
+    "Deporte": {
+        "start_hour": 6,
+        "end_hour": 21,
+        "ideal_temperature": 18,
+        "ideal_humidity": 45,
+        "ideal_wind": 5,
+        "ideal_uv": 3,
+        "rain_weight": 1.0,
+        "wind_weight": 1.0,
+        "humidity_weight": 1.4,
+        "uv_weight": 1.4,
+        "temperature_weight": 1.5,
+    },
+    "Bici": {
+        "start_hour": 7,
+        "end_hour": 21,
+        "ideal_temperature": 20,
+        "ideal_humidity": 50,
+        "ideal_wind": 4,
+        "ideal_uv": 4,
+        "rain_weight": 1.5,
+        "wind_weight": 1.5,
+        "humidity_weight": 1.0,
+        "uv_weight": 1.0,
+        "temperature_weight": 1.0,
+    },
+    "Lavar ropa": {
+        "start_hour": 9,
+        "end_hour": 18,
+        "ideal_temperature": 24,
+        "ideal_humidity": 35,
+        "ideal_wind": 10,
+        "ideal_uv": 5,
+        "rain_weight": 2.0,
+        "wind_weight": 1.2,
+        "humidity_weight": 1.8,
+        "uv_weight": 1.0,
+        "temperature_weight": 1.0,
+    },
+}
+
+
+def calculate_activity_score(row, settings):
+    score = 100
+    temperature = row["temperature_2m"]
+    rain_probability = row["precipitation_probability"]
+    wind_speed = row["wind_speed_10m"]
+    humidity = row["relative_humidity_2m"]
+    uv_index = row["uv_index"]
+
+    temperature_distance = abs(temperature - settings["ideal_temperature"])
+    humidity_distance = abs(humidity - settings["ideal_humidity"])
+    uv_distance = abs(uv_index - settings["ideal_uv"])
+
+    if temperature_distance >= 14:
+        score -= 30 * settings["temperature_weight"]
+    elif temperature_distance >= 8:
+        score -= 15 * settings["temperature_weight"]
+    elif temperature_distance >= 5:
+        score -= 6 * settings["temperature_weight"]
+
+    if rain_probability >= 70:
+        score -= 35 * settings["rain_weight"]
+    elif rain_probability >= 40:
+        score -= 20 * settings["rain_weight"]
+    elif rain_probability >= 20:
+        score -= 10 * settings["rain_weight"]
+
+    if wind_speed >= 40:
+        score -= 25 * settings["wind_weight"]
+    elif wind_speed >= 25:
+        score -= 12 * settings["wind_weight"]
+
+    if humidity_distance >= 35:
+        score -= 10 * settings["humidity_weight"]
+    elif humidity_distance >= 25:
+        score -= 5 * settings["humidity_weight"]
+
+    if uv_distance >= 5:
+        score -= 10 * settings["uv_weight"]
+    elif uv_distance >= 3:
+        score -= 5 * settings["uv_weight"]
+
+    return max(round(score, 2), 0)
+
+
+def calculate_comfort_distance(row, settings):
+    temperature_distance = (
+        abs(row["temperature_2m"] - settings["ideal_temperature"])
+        * settings["temperature_weight"]
+    )
+    humidity_distance = (
+        abs(row["relative_humidity_2m"] - settings["ideal_humidity"])
+        / 10
+        * settings["humidity_weight"]
+    )
+    wind_distance = (
+        abs(row["wind_speed_10m"] - settings["ideal_wind"])
+        / 5
+        * settings["wind_weight"]
+    )
+    uv_distance = (
+        abs(row["uv_index"] - settings["ideal_uv"]) / 2 * settings["uv_weight"]
+    )
+    rain_distance = row["precipitation_probability"] / 20 * settings["rain_weight"]
+
+    return (
+        temperature_distance
+        + humidity_distance
+        + wind_distance
+        + uv_distance
+        + rain_distance
+    )
+
+
+def classify_score(score):
+    if score >= 80:
+        return "🟢 Excelente"
+    if score >= 60:
+        return "🔵 Bueno"
+    if score >= 40:
+        return "🟡 Regular"
+    return "🔴 Malo"
+
+
+def get_valid_hours(df, start_hour=7, end_hour=22):
+    return df[(df["hour"] >= start_hour) & (df["hour"] <= end_hour)].copy()
+
+
+# ─── UI ────────────────────────────────────────────────────────────────────────
+
+st.title("🌤️ OutByML")
+st.subheader("Recomendador de Actividades según el Clima")
+st.markdown(
+    "Encuentra la **mejor hora** del día para tu actividad favorita "
+    "basándose en datos meteorológicos en tiempo real."
+)
+
+st.divider()
+
+# ─── Sidebar inputs ───────────────────────────────────────────────────────────
+with st.sidebar:
+    st.header("⚙️ Configuración")
+
+    city_name = st.text_input("🏙️ Ciudad", placeholder="Ej: Madrid, Bogotá, CDMX")
+
+    activity = st.selectbox(
+        "🎯 Actividad",
+        options=list(ACTIVITIES.keys()),
+        index=0,
+    )
+
+    search_button = st.button("🔍 Buscar", type="primary", use_container_width=True)
+
+# ─── Main logic ───────────────────────────────────────────────────────────────
+
+if search_button and city_name:
+    with st.spinner("Buscando ciudad..."):
+        results = search_city(city_name)
+
+    if not results:
+        st.warning("No se encontró la ciudad. Intenta con otro nombre.")
+    else:
+        # Let user pick the city
+        city_options = []
+        for city in results:
+            name = city.get("name", "")
+            admin1 = city.get("admin1", "")
+            country = city.get("country", "")
+            city_options.append(f"{name}, {admin1}, {country}")
+
+        selected_label = st.selectbox(
+            "Selecciona la ciudad correcta:",
+            options=city_options,
+            index=0,
+        )
+        selected_index = city_options.index(selected_label)
+        selected_city = results[selected_index]
+
+        settings = ACTIVITIES[activity]
+        latitude = selected_city["latitude"]
+        longitude = selected_city["longitude"]
+        timezone = selected_city.get("timezone", "auto")
+
+        with st.spinner("Consultando datos meteorológicos..."):
+            weather_data = get_weather(latitude, longitude, timezone)
+            df = build_weather_dataframe(weather_data)
+
+        if df.empty:
+            st.error("No hay datos climáticos disponibles para esta ubicación.")
+        else:
+            df["activity_score"] = df.apply(
+                lambda row: calculate_activity_score(row, settings), axis=1
+            )
+            df["recommendation"] = df["activity_score"].apply(classify_score)
+            df["comfort_distance"] = df.apply(
+                lambda row: calculate_comfort_distance(row, settings), axis=1
+            )
+
+            df_valid_hours = get_valid_hours(
+                df,
+                start_hour=settings["start_hour"],
+                end_hour=settings["end_hour"],
+            )
+
+            if df_valid_hours.empty:
+                st.warning(
+                    "No hay horas disponibles dentro de la franja horaria seleccionada."
+                )
+            else:
+                df_sorted = df_valid_hours.sort_values(
+                    ["activity_score", "comfort_distance"],
+                    ascending=[False, True],
+                )
+                best_row = df_sorted.iloc[0]
+
+                # ─── Results header ───
+                st.divider()
+                col_city, col_activity = st.columns(2)
+                with col_city:
+                    st.markdown(f"### 📍 {selected_city.get('name')}, {selected_city.get('country')}")
+                    st.caption(
+                        f"Coordenadas: {latitude:.4f}, {longitude:.4f} | Timezone: {timezone}"
+                    )
+                with col_activity:
+                    st.markdown(f"### 🎯 {activity}")
+                    st.caption(
+                        f"Franja evaluada: {settings['start_hour']:02d}:00 – {settings['end_hour']:02d}:00"
+                    )
+
+                # ─── Best hour highlight ───
+                st.divider()
+                st.markdown("## ⭐ Mejor hora recomendada")
+
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Hora", f"{int(best_row['hour']):02d}:00")
+                col2.metric("Score", f"{best_row['activity_score']}/100")
+                col3.metric("Confort", f"{best_row['comfort_distance']:.1f}")
+                col4.metric("Estado", best_row["recommendation"])
+
+                # ─── Weather details for best hour ───
+                st.markdown("#### Condiciones en la mejor hora")
+                mcol1, mcol2, mcol3, mcol4, mcol5 = st.columns(5)
+                mcol1.metric("🌡️ Temp.", f"{best_row['temperature_2m']:.1f}°C")
+                mcol2.metric("💧 Humedad", f"{best_row['relative_humidity_2m']}%")
+                mcol3.metric("🌧️ Lluvia", f"{best_row['precipitation_probability']}%")
+                mcol4.metric("💨 Viento", f"{best_row['wind_speed_10m']} km/h")
+                mcol5.metric("☀️ UV", f"{best_row['uv_index']}")
+
+                # ─── Top 5 table ───
+                st.divider()
+                st.markdown("### 🏆 Top 5 mejores horas")
+
+                columns_to_show = [
+                    "hour",
+                    "temperature_2m",
+                    "apparent_temperature",
+                    "precipitation_probability",
+                    "wind_speed_10m",
+                    "relative_humidity_2m",
+                    "uv_index",
+                    "activity_score",
+                    "recommendation",
+                ]
+
+                top5 = df_sorted[columns_to_show].head(5).copy()
+                top5.columns = [
+                    "Hora",
+                    "Temp (°C)",
+                    "Sens. Térmica (°C)",
+                    "Lluvia (%)",
+                    "Viento (km/h)",
+                    "Humedad (%)",
+                    "UV",
+                    "Score",
+                    "Estado",
+                ]
+                top5["Hora"] = top5["Hora"].apply(lambda h: f"{int(h):02d}:00")
+                st.dataframe(top5, use_container_width=True, hide_index=True)
+
+                # ─── Charts ───
+                st.divider()
+                st.markdown("### 📊 Gráficos por hora")
+
+                chart_col1, chart_col2 = st.columns(2)
+
+                with chart_col1:
+                    st.markdown("**Score de actividad**")
+                    chart_data = df_valid_hours.set_index("hour")[["activity_score"]]
+                    st.line_chart(chart_data, y="activity_score", color="#1f77b4")
+
+                    st.markdown("**Probabilidad de lluvia (%)**")
+                    chart_data = df_valid_hours.set_index("hour")[
+                        ["precipitation_probability"]
+                    ]
+                    st.bar_chart(chart_data, y="precipitation_probability", color="#636efa")
+
+                with chart_col2:
+                    st.markdown("**Temperatura (°C)**")
+                    chart_data = df_valid_hours.set_index("hour")[
+                        ["temperature_2m", "apparent_temperature"]
+                    ]
+                    st.line_chart(chart_data)
+
+                    st.markdown("**Viento (km/h)**")
+                    chart_data = df_valid_hours.set_index("hour")[["wind_speed_10m"]]
+                    st.area_chart(chart_data, y="wind_speed_10m", color="#ff7f0e")
+
+                # ─── Map ───
+                st.divider()
+                st.markdown("### 🗺️ Ubicación")
+
+                map_df = pd.DataFrame(
+                    [{"lat": latitude, "lon": longitude}]
+                )
+
+                st.pydeck_chart(
+                    pdk.Deck(
+                        map_style="mapbox://styles/mapbox/light-v9",
+                        initial_view_state=pdk.ViewState(
+                            latitude=latitude,
+                            longitude=longitude,
+                            zoom=9,
+                            pitch=35,
+                        ),
+                        layers=[
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=map_df,
+                                get_position="[lon, lat]",
+                                get_radius=15000,
+                                get_fill_color=[0, 128, 255, 180],
+                                pickable=True,
+                            ),
+                        ],
+                        tooltip={
+                            "html": f"<b>{selected_city.get('name')}</b><br/>{selected_city.get('country')}",
+                            "style": {"backgroundColor": "white", "color": "black"},
+                        },
+                    )
+                )
+
+elif search_button and not city_name:
+    st.warning("Por favor, escribe el nombre de una ciudad.")
+else:
+    # Landing state
+    st.info(
+        "👈 Escribe una ciudad y selecciona una actividad en el panel lateral, "
+        "luego presiona **Buscar** para obtener la recomendación."
+    )
