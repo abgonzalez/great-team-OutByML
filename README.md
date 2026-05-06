@@ -11,6 +11,25 @@ OutByML permite al usuario:
 3. Obtener la mejor franja horaria del día según las condiciones climáticas (temperatura, humedad, viento, lluvia, índice UV).
 4. Visualizar gráficos interactivos del clima por hora y un mapa de la ciudad seleccionada.
 
+## Actividades iniciales
+
+- Pasear
+- Turismo
+- Deporte
+- Bici
+- Lavar ropa
+
+## Tecnologias usadas
+
+- Python
+- Requests
+- Pandas
+- Streamlit
+- Plotly
+- Pydeck
+- Open-Meteo Geocoding API
+- Open-Meteo Forecast API
+
 ## Requisitos previos
 
 - **Python 3.12** o superior
