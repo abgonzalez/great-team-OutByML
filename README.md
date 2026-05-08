@@ -48,7 +48,7 @@ cd project
 ### 2. Crear un entorno virtual
 
 ```bash
-python3 -m venv env
+
 ```
 
 ### 3. Activar el entorno virtual
