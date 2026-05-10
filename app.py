@@ -1,4 +1,4 @@
-"""Aplicacion web de OutByML con Streamlit."""
+"""Aplicacion web de SalimosHoy? con Streamlit."""
 
 import base64
 from pathlib import Path
@@ -30,8 +30,15 @@ from src.visualization import (
 )
 from src.weather_api import build_weather_dataframe, get_weather
 
+ACTIVITIES = [
+    "Pasear o hacer senderismo",
+    "Jardineria y agricultura",
+    "Deportes al aire libre",
+    "Picnic o actividades en parque",
+    "Ir al cine",
+    "Ir a la playa",
+]
 
-ACTIVITIES = ["Pasear", "Turismo", "Deporte", "Bici", "Lavar ropa"]
 CITIES = [
     'Madrid', 'Dubai', 'Reykjavik', 'Bilbao', 'Caracas',
     'Buenos Aires', 'Barcelona', 'Riyadh', 'Oslo', 'Dublin',
@@ -47,8 +54,17 @@ CITIES = [
 ]
 BASE_DIR = Path(__file__).resolve().parent
 ML_MODEL_PATH = BASE_DIR / "models" / "outbyml_random_forest_model.pkl"
-HERO_IMAGE_PATH = BASE_DIR / "assets" / "tiempo.png"
+HERO_IMAGE_PATH = BASE_DIR / "assets" / "hero_banner.jpg"
 HERO_BG_PATH = BASE_DIR / "assets" / "red_neuronal.jpg"
+PAGE_BG_PATH = BASE_DIR / "assets" / "weather_bg.jpg"
+ACTIVITY_IMAGES = {
+    "Pasear o hacer senderismo": BASE_DIR / "assets" / "activity_senderismo.jpg",
+    "Jardineria y agricultura": BASE_DIR / "assets" / "activity_jardineria.jpg",
+    "Deportes al aire libre": BASE_DIR / "assets" / "activity_deportes.jpg",
+    "Picnic o actividades en parque": BASE_DIR / "assets" / "activity_picnic.jpg",
+    "Ir al cine": BASE_DIR / "assets" / "activity_cine.jpg",
+    "Ir a la playa": BASE_DIR / "assets" / "activity_playa.jpg",
+}
 ML_FEATURE_COLUMNS = [
     "temperature_2m",
     "apparent_temperature",
@@ -67,7 +83,7 @@ ML_FEATURE_COLUMNS = [
 
 
 st.set_page_config(
-    page_title="OutByML",
+    page_title="SalimosHoy?",
     page_icon=None,
     layout="wide",
 )
@@ -86,6 +102,7 @@ def image_to_base64(image_path):
 def inject_styles(theme):
     """Aplica una capa visual sencilla y responsiva."""
     hero_bg_base64 = image_to_base64(HERO_BG_PATH)
+    page_bg_base64 = image_to_base64(PAGE_BG_PATH)
 
     if theme == "Oscuro":
         colors = {
@@ -116,7 +133,41 @@ def inject_styles(theme):
             "shadow": "0 18px 48px rgba(0, 0, 0, 0.28)",
         }
         hero_card_background = (
-            f'linear-gradient(180deg, rgba(8,18,35,0.82), rgba(12,27,50,0.88)), '
+            f'linear-gradient(180deg, #111E30, #172A42), '
+            f'url("data:image/jpeg;base64,{hero_bg_base64}")'
+            if hero_bg_base64
+            else "linear-gradient(180deg, #111E30, #172A42)"
+        )
+    else:
+        colors = {
+            "bg": "#FFFDF8",
+            "bg_layer": "linear-gradient(180deg, #FFFEF9 0%, #FFF8EC 100%)",
+            "panel": "#FFFFFF",
+            "panel_soft": "#FFF9EF",
+            "border": "rgba(234, 206, 160, 0.45)",
+            "text": "#111111",
+            "muted": "#333333",
+            "accent": "#F59E0B",
+            "accent_2": "#38BDF8",
+            "hero_subtitle": "#3D5A7A",
+            "input_bg": "#FFFFFF",
+            "button_text": "#FFFFFF",
+            "recommendation_bg": "rgba(245, 158, 11, 0.10)",
+            "recommendation_text": "#1A2B3D",
+            "hero_title_shadow": (
+                "0 2px 0 rgba(255, 255, 255, 0.90), "
+                "0 6px 18px rgba(245, 158, 11, 0.20), "
+                "0 14px 35px rgba(15, 23, 42, 0.08)"
+            ),
+            "hero_visual": (
+                "radial-gradient(circle at 30% 24%, rgba(245, 158, 11, 0.18), transparent 26%), "
+                "radial-gradient(circle at 68% 72%, rgba(56, 189, 248, 0.14), transparent 22%), "
+                "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,248,230,0.85))"
+            ),
+            "shadow": "0 12px 32px rgba(194, 155, 80, 0.10)",
+        }
+        hero_card_background = (
+            f'linear-gradient(180deg, rgba(255,253,248,0.92), rgba(255,248,230,0.90)), '
             f'url("data:image/jpeg;base64,{hero_bg_base64}")'
             if hero_bg_base64
             else "linear-gradient(180deg, var(--panel), var(--panel-soft))"
@@ -175,15 +226,35 @@ def inject_styles(theme):
                 --hero-title-shadow: __HERO_TITLE_SHADOW__;
                 --hero-visual: __HERO_VISUAL__;
                 --card-shadow: __SHADOW__;
+                --page-bg-image: __PAGE_BG_IMAGE__;
             }
 
             .stApp {
                 background: var(--bg-layer);
+                background-image: var(--page-bg-image);
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
                 color: var(--text);
+                position: relative;
+            }
+
+            .stApp::before {
+                content: '';
+                position: fixed;
+                inset: 0;
+                background: rgba(255, 255, 255, 0.45);
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            .stApp > * {
+                position: relative;
+                z-index: 1;
             }
 
             .block-container {
-                max-width: 1200px;
+                max-width: 1600px;
                 padding-top: 1.5rem;
                 padding-bottom: 3.5rem;
             }
@@ -210,16 +281,20 @@ def inject_styles(theme):
             .hero-card .hero-kicker {
                 display: inline-flex;
                 align-items: center;
+                gap: 0.5rem;
                 width: fit-content;
                 margin: 0 auto 0.75rem auto;
-                padding: 0.38rem 0.72rem;
+            }
+
+            .kicker-pill {
+                padding: 0.32rem 0.7rem;
                 border: 1px solid rgba(56, 189, 248, 0.34);
-                border-radius: 999px;
+                border-radius: 9px;
                 background: rgba(56, 189, 248, 0.10);
                 color: var(--accent);
-                font-size: 0.82rem;
+                font-size: 0.78rem;
                 font-weight: 800;
-                letter-spacing: 0.02em;
+                letter-spacing: 0.04em;
                 text-transform: uppercase;
             }
 
@@ -236,7 +311,7 @@ def inject_styles(theme):
             }
 
             .hero-card h1 {
-                max-width: 860px;
+                max-width: 1100px;
                 font-size: clamp(3.2rem, 8vw, 6.4rem);
                 line-height: 0.9;
                 margin: 0 auto 0.7rem auto;
@@ -247,19 +322,19 @@ def inject_styles(theme):
             }
 
             .hero-card h2 {
-                max-width: 780px;
-                font-size: clamp(1.15rem, 2.3vw, 1.7rem);
+                max-width: 1000px;
+                font-size: clamp(1.3rem, 2.5vw, 1.85rem);
                 font-weight: 750;
                 line-height: 1.3;
                 margin: 0 auto 0.75rem auto;
-                color: var(--text);
+                color: var(--muted);
             }
 
             .hero-card p {
-                max-width: 760px;
+                max-width: 960px;
                 margin: 0 auto;
-                color: var(--muted);
-                font-size: 1.03rem;
+                color: var(--text);
+                font-size: 1.15rem;
                 line-height: 1.65;
             }
 
@@ -271,9 +346,44 @@ def inject_styles(theme):
                 margin-top: 1.05rem;
             }
 
+            .hero-btn-wrapper {
+                margin-top: 1.3rem;
+                text-align: center;
+            }
+
+            .hero-cta-btn {
+                display: inline-block;
+                padding: 0.85rem 2.8rem;
+                border-radius: 999px;
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
+                color: #FFFFFF;
+                font-size: 1.1rem;
+                font-weight: 800;
+                letter-spacing: 0.3px;
+                text-decoration: none;
+                box-shadow: 0 10px 28px rgba(45, 181, 160, 0.3);
+                transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease, filter 200ms ease;
+            }
+
+            .hero-cta-btn:hover {
+                transform: translateY(-3px) scale(1.02);
+                box-shadow: 0 14px 36px rgba(45, 181, 160, 0.4);
+                filter: brightness(1.08);
+                color: #FFFFFF;
+                text-decoration: none;
+            }
+
+            .hero-cta-btn:hover {
+                transform: translateY(-3px) scale(1.02);
+                box-shadow: 0 14px 36px rgba(47, 128, 237, 0.35);
+                filter: brightness(1.08);
+                color: var(--button-text);
+                text-decoration: none;
+            }
+
             .hero-badge {
                 border: 1px solid rgba(56, 189, 248, 0.26);
-                border-radius: 999px;
+                border-radius: 9px;
                 padding: 0.48rem 0.72rem;
                 background: rgba(255, 255, 255, 0.06);
                 color: var(--text);
@@ -283,8 +393,8 @@ def inject_styles(theme):
             }
 
             .section-title {
-                font-size: clamp(1.15rem, 2vw, 1.45rem);
-                font-weight: 700;
+                font-size: clamp(1.7rem, 3vw, 2.3rem);
+                font-weight: 800;
                 margin: 1.5rem 0 0.3rem 0;
                 color: var(--text);
                 text-align: center;
@@ -293,7 +403,15 @@ def inject_styles(theme):
             .section-subtitle {
                 margin: 0 0 0.85rem 0;
                 color: var(--muted);
-                font-size: 0.96rem;
+                font-size: 1.15rem;
+                line-height: 1.55;
+                text-align: center;
+            }
+
+            .section-subtitle {
+                margin: 0 0 0.85rem 0;
+                color: var(--text);
+                font-size: 1.05rem;
                 line-height: 1.55;
                 text-align: center;
             }
@@ -301,9 +419,9 @@ def inject_styles(theme):
             .info-grid,
             .analysis-grid {
                 display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 0.9rem;
-                margin: 0.9rem 0 1.2rem 0;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 1rem;
+                margin: 1rem 0 1.4rem 0;
             }
 
             .analysis-grid {
@@ -312,95 +430,180 @@ def inject_styles(theme):
             }
 
             .info-card {
+                position: relative;
                 border: 1px solid var(--border);
                 border-radius: 16px;
-                padding: 1rem;
+                padding: 1.5rem 1.2rem;
                 background: linear-gradient(180deg, var(--panel), var(--panel-soft));
-                box-shadow: var(--card-shadow);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
+                transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1), border-color 160ms ease, box-shadow 160ms ease;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                z-index: 1;
+            }
+
+            .info-card::before {
+                content: '';
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                border-radius: 16px;
+                background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), transparent 50%);
+                opacity: 0;
+                transition: opacity 160ms ease;
+                z-index: -1;
+                pointer-events: none;
+            }
+
+            .info-card:hover {
+                transform: translateY(-4px);
+                border-color: var(--accent);
+                box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04), 0 0 0 1px var(--accent);
+            }
+
+            .info-card:hover::before {
+                opacity: 1;
             }
 
             .analysis-card {
                 position: relative;
                 overflow: hidden;
-                min-height: 150px;
+                min-height: 160px;
                 border: 1px solid var(--border);
+                border-top: 3px solid var(--border);
                 border-radius: 18px;
-                padding: 1rem;
+                padding: 1.2rem;
                 background:
-                    radial-gradient(circle at 82% 18%, rgba(56, 189, 248, 0.14), transparent 28%),
+                    radial-gradient(circle at 82% 18%, rgba(56, 189, 248, 0.08), transparent 40%),
                     linear-gradient(180deg, var(--panel), var(--panel-soft));
-                box-shadow: var(--card-shadow);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
-                transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+                align-items: center;
+                transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1), border-color 160ms ease, box-shadow 160ms ease;
             }
 
             .analysis-card:hover {
-                transform: translateY(-2px);
-                border-color: rgba(56, 189, 248, 0.46);
-                box-shadow: 0 18px 42px rgba(16, 32, 51, 0.14);
+                transform: translateY(-4px);
+                border-top-color: var(--accent);
+                border-color: var(--border);
+                box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04), 0 -1px 0 0 var(--accent);
             }
 
             .analysis-badge {
-                width: 2.7rem;
-                min-width: 2.7rem;
-                height: 2.7rem;
+                width: 4.5rem;
+                min-width: 4.5rem;
+                height: 4.5rem;
+                display: grid;
+                place-items: center;
+                border-radius: 999px;
+                margin-bottom: 1rem;
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
+                font-size: 2.4rem;
+                line-height: 1;
+                border: none;
+                box-shadow: 0 6px 16px rgba(45, 181, 160, 0.35);
+                transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 300ms ease;
+            }
+
+            .analysis-card:hover .analysis-badge {
+                transform: scale(1.15);
+                box-shadow: 0 0 0 5px rgba(45, 181, 160, 0.2), 0 10px 24px rgba(45, 181, 160, 0.4);
+            }
+                line-height: 1;
+                box-shadow: 0 4px 12px rgba(47, 128, 237, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+                transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 300ms ease;
+            }
+
+            .info-step {
+                width: 5.5rem;
+                height: 5.5rem;
                 display: grid;
                 place-items: center;
                 border-radius: 999px;
                 margin-bottom: 0.85rem;
-                background: linear-gradient(135deg, var(--accent), var(--accent-2));
-                color: var(--button-text);
-                font-weight: 850;
-                font-size: 0.9rem;
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
+                font-size: 3rem;
                 line-height: 1;
-                box-shadow: 0 10px 22px rgba(47, 128, 237, 0.20);
+                border: none;
+                position: relative;
+                z-index: 2;
+                box-shadow: 0 6px 16px rgba(45, 181, 160, 0.35);
+                transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 300ms ease;
+            }
+            
+            .info-card:hover .info-step {
+                transform: scale(1.15);
+                box-shadow: 0 0 0 5px rgba(45, 181, 160, 0.2), 0 10px 24px rgba(45, 181, 160, 0.4);
+            }
+            
+            .info-card:hover .info-step {
+                box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.2), 0 6px 12px rgba(47, 128, 237, 0.3);
             }
 
-            .info-step {
-                width: 2rem;
-                height: 2rem;
-                display: grid;
-                place-items: center;
-                border-radius: 999px;
-                margin-bottom: 0.65rem;
-                background: linear-gradient(135deg, var(--accent), var(--accent-2));
-                color: var(--button-text);
-                font-weight: 800;
-                font-size: 0.95rem;
+            .info-grid {
+                position: relative;
+            }
+
+            .info-grid::before {
+                content: '';
+                position: absolute;
+                top: 3.5rem;
+                left: 10%;
+                right: 10%;
+                height: 2px;
+                background: repeating-linear-gradient(90deg, var(--border) 0, var(--border) 6px, transparent 6px, transparent 12px);
+                z-index: 0;
             }
 
             .info-card h3,
             .analysis-card h3 {
-                margin: 0 0 0.35rem 0;
-                font-size: 1.02rem;
-                line-height: 1.25;
+                margin: 0 0 0.5rem 0;
+                font-size: 1.2rem;
+                font-weight: 800;
+                line-height: 1.3;
                 text-align: center;
+                color: var(--text);
             }
 
             .info-card p,
             .analysis-card p {
                 margin: 0;
                 color: var(--muted);
-                font-size: 0.88rem;
-                line-height: 1.45;
+                font-size: 1rem;
+                line-height: 1.5;
                 text-align: center;
             }
 
             .soft-card {
                 height: 100%;
+                min-height: 140px;
                 border: 1px solid var(--border);
                 border-radius: 18px;
                 padding: 1.15rem 1.2rem;
                 background: linear-gradient(180deg, var(--panel), var(--panel-soft));
                 box-shadow: var(--card-shadow);
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+            }
+
+            /* Equal-height metric cards in Streamlit columns */
+            [data-testid="stHorizontalBlock"] {
+                align-items: stretch;
+            }
+            [data-testid="stHorizontalBlock"] [data-testid="stColumn"] > div {
+                height: 100%;
+            }
+            [data-testid="stHorizontalBlock"] [data-testid="stColumn"] > div > div {
+                height: 100%;
             }
 
             .metric-label {
                 margin: 0 0 0.35rem 0;
                 color: var(--muted);
-                font-size: 0.9rem;
+                font-size: 1rem;
             }
 
             .metric-value {
@@ -415,7 +618,7 @@ def inject_styles(theme):
             .metric-caption {
                 margin: 0.45rem 0 0 0;
                 color: var(--muted);
-                font-size: 0.9rem;
+                font-size: 1rem;
                 line-height: 1.35;
             }
 
@@ -441,20 +644,20 @@ def inject_styles(theme):
 
             .stButton > button {
                 border-radius: 999px;
-                border: 1px solid rgba(56, 189, 248, 0.50);
-                background: linear-gradient(135deg, var(--accent), var(--accent-2));
-                color: var(--button-text);
+                border: none;
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
+                color: #FFFFFF;
                 font-weight: 750;
                 min-height: 2.9rem;
-                box-shadow: 0 10px 24px rgba(47, 128, 237, 0.18);
+                box-shadow: 0 6px 18px rgba(45, 181, 160, 0.25);
                 transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
             }
 
             .stButton > button:hover {
-                filter: brightness(1.03);
-                transform: translateY(-1px);
-                box-shadow: 0 14px 28px rgba(47, 128, 237, 0.24);
-                color: #061018;
+                filter: brightness(1.06);
+                transform: translateY(-2px);
+                box-shadow: 0 10px 24px rgba(45, 181, 160, 0.35);
+                color: #FFFFFF;
             }
 
             div[data-testid="stTextInput"] input,
@@ -463,7 +666,28 @@ def inject_styles(theme):
                 border-color: var(--border);
                 background-color: var(--input-bg);
                 color: var(--text);
-                min-height: 2.75rem;
+                min-height: 3.2rem;
+                font-size: 1.25rem;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            [data-testid="stWidgetLabel"] label,
+            [data-testid="stWidgetLabel"] p {
+                color: var(--text) !important;
+                font-size: 1.2rem !important;
+                font-weight: 700 !important;
+            }
+
+            .st-key-control_card p,
+            .st-key-control_card span,
+            .st-key-control_card div {
+                font-size: 1.1rem;
+                color: var(--text);
+            }
+
+            div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
+                border-color: var(--accent);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             }
 
             div[data-testid="stTextInput"] input:focus {
@@ -477,17 +701,18 @@ def inject_styles(theme):
             }
 
             .st-key-theme_picker {
-                max-width: 90px;
+                max-width: 300px;
                 margin: 0;
-                padding: 0.22rem 0.35rem;
+                padding: 0.3rem 0.5rem;
                 border: 1px solid var(--border);
-                border-radius: 999px;
-                background: rgba(255, 255, 255, 0.08);
-                box-shadow: 0 8px 20px rgba(16, 32, 51, 0.08);
+                border-radius: 9px;
+                background: rgba(255, 255, 255, 0.85);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                backdrop-filter: blur(8px);
             }
 
             .st-key-theme_menu {
-                margin: 2.5rem 0 0.5rem 0;
+                margin: 1.5rem 0 0.5rem 0;
             }
 
             .st-key-theme_menu .stColumn:last-child {
@@ -495,40 +720,35 @@ def inject_styles(theme):
                 justify-content: flex-end;
             }
 
-            .st-key-theme_menu button {
-                min-height: 2.1rem;
-                width: 2.4rem;
-                padding: 0;
-                border-radius: 999px;
-                border: 1px solid var(--border);
-                background: var(--panel);
-                color: var(--text);
-                box-shadow: var(--card-shadow);
-            }
-
-            .st-key-theme_menu button:hover {
-                border-color: var(--accent);
-                color: var(--text);
-                transform: translateY(-1px);
-            }
-
             .st-key-theme_picker div[role="radiogroup"] {
-                gap: 0.15rem;
-                justify-content: flex-start;
+                gap: 0.2rem;
+                justify-content: center;
             }
 
             .st-key-theme_picker label {
                 margin: 0;
-                padding: 0.15rem 0.35rem;
-                border-radius: 999px;
-                font-size: 0.95rem;
-                color: var(--muted);
+                padding: 0.25rem 0.5rem;
+                border-radius: 9px;
+                font-size: 1.15rem;
+                cursor: pointer;
+                transition: background 0.2s ease, transform 0.15s ease;
+            }
+
+            .st-key-theme_picker label:hover {
+                background: rgba(56, 189, 248, 0.12);
+                transform: scale(1.1);
             }
 
             .st-key-theme_picker label p {
-                font-size: 0.95rem;
+                font-size: 1.15rem;
                 line-height: 1;
                 margin: 0;
+            }
+
+            .st-key-theme_picker button[kind="resetButton"],
+            .st-key-theme_picker [data-testid="stClearButton"],
+            .st-key-theme_picker div[role="radiogroup"] + div {
+                display: none !important;
             }
 
             .st-key-theme_picker [data-testid="stWidgetLabel"] {
@@ -546,12 +766,69 @@ def inject_styles(theme):
                 box-shadow: var(--card-shadow);
             }
 
-            .st-key-control_card div[data-testid="stVerticalBlockBorderWrapper"],
             .st-key-map_panel div[data-testid="stVerticalBlockBorderWrapper"],
             .st-key-score_panel div[data-testid="stVerticalBlockBorderWrapper"],
             .st-key-chart_panel div[data-testid="stVerticalBlockBorderWrapper"],
             .st-key-top_panel div[data-testid="stVerticalBlockBorderWrapper"] {
                 padding: 0.15rem;
+            }
+
+            /* --- Enhanced Control Card --- */
+            .st-key-control_card div[data-testid="stVerticalBlockBorderWrapper"] {
+                padding: 1.5rem;
+                background: linear-gradient(180deg, var(--panel-soft), var(--panel));
+                border: 1px solid var(--border);
+                border-radius: 18px;
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            }
+
+            /* Spacing and visual separation between Ciudad and Actividad/Modo */
+            .st-key-control_card div[data-testid="stVerticalBlock"] > div:first-child {
+                padding-bottom: 1.2rem;
+                margin-bottom: 0.5rem;
+                border-bottom: 1px dashed var(--border);
+            }
+
+            /* Reduce gap inside the form container slightly for better cohesion */
+            .st-key-control_card div[data-testid="stVerticalBlock"] {
+                gap: 1rem;
+            }
+
+            /* Better button prominence inside control card */
+            .st-key-control_card .stButton > button {
+                margin-top: 1rem;
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
+                border: none;
+                border-radius: 999px;
+                color: #FFFFFF;
+                font-size: 1.05rem;
+                font-weight: 800;
+                letter-spacing: 0.3px;
+                min-height: 3.2rem;
+                box-shadow: 0 8px 24px rgba(45, 181, 160, 0.3);
+                transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease, filter 200ms ease;
+            }
+
+            .st-key-control_card .stButton > button:hover {
+                transform: translateY(-3px) scale(1.01);
+                box-shadow: 0 14px 32px rgba(45, 181, 160, 0.4);
+                filter: brightness(1.08);
+            }
+
+            .st-key-control_card .stButton > button:hover {
+                transform: translateY(-3px) scale(1.01);
+                box-shadow: 0 14px 32px rgba(47, 128, 237, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.25);
+                filter: brightness(1.08);
+            }
+
+            .st-key-score_panel div[data-testid="stVerticalBlockBorderWrapper"],
+            .st-key-chart_panel div[data-testid="stVerticalBlockBorderWrapper"] {
+                height: 100%;
+            }
+
+            /* Align score chart with climate chart (offset for tab bar) */
+            .st-key-score_panel .stPlotlyChart {
+                padding-top: 49px;
             }
 
             div[data-testid="stExpander"] {
@@ -586,7 +863,11 @@ def inject_styles(theme):
                 }
 
                 .info-grid {
-                    grid-template-columns: 1fr;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                
+                .info-grid::before {
+                    display: none; /* Hide connector line on smaller screens when wrapping */
                 }
 
                 .analysis-grid {
@@ -614,6 +895,20 @@ def inject_styles(theme):
         </style>
         """
 
+    if page_bg_base64:
+        if theme == "Oscuro":
+            page_bg_image = (
+                f'linear-gradient(180deg, rgba(7,17,31,0.85) 0%, rgba(11,18,32,0.90) 100%), '
+                f'url("data:image/jpeg;base64,{page_bg_base64}")'
+            )
+        else:
+            page_bg_image = (
+                f'linear-gradient(180deg, rgba(255,253,248,0.35) 0%, rgba(255,248,236,0.40) 100%), '
+                f'url("data:image/jpeg;base64,{page_bg_base64}")'
+            )
+    else:
+        page_bg_image = "none"
+
     replacements = {
         "__BG__": colors["bg"],
         "__BG_LAYER__": colors["bg_layer"],
@@ -633,6 +928,7 @@ def inject_styles(theme):
         "__HERO_VISUAL__": colors["hero_visual"],
         "__SHADOW__": colors["shadow"],
         "__HERO_SUBTITLE__": colors["hero_subtitle"],
+        "__PAGE_BG_IMAGE__": page_bg_image,
     }
     for placeholder, value in replacements.items():
         css = css.replace(placeholder, value)
@@ -700,32 +996,28 @@ def prepare_ml_features(df_valid_hours, activity, selected_city):
 
 
 def render_theme_selector():
-    """Muestra el selector visual sin afectar la logica de negocio."""
     with st.container(key="theme_picker"):
         selected_theme_icon = st.radio(
             "Tema visual",
-            ["☀", "☾"],
-            index=1,
+            ["☀️", "🌙"],
+            index=0,
             key="visual_theme_icon",
             horizontal=True,
             label_visibility="collapsed",
         )
-    return "Claro" if selected_theme_icon == "☀" else "Oscuro"
+    return "Claro" if selected_theme_icon == "☀️" else "Oscuro"
 
 
 def render_theme_menu():
-    """Muestra el selector de tema dentro de un menu discreto."""
     with st.container(key="theme_menu"):
-        _, menu_col = st.columns([0.92, 0.08])
+        _, menu_col = st.columns([0.88, 0.12])
         with menu_col:
-            with st.popover("☰"):
-                render_theme_selector()
+            render_theme_selector()
 
 
 def get_theme_mode():
-    """Devuelve el tema activo a partir del estado del selector visual."""
-    selected_theme_icon = st.session_state.get("visual_theme_icon", "☾")
-    return "Claro" if selected_theme_icon == "☀" else "Oscuro"
+    selected_theme_icon = st.session_state.get("visual_theme_icon", "☀️")
+    return "Claro" if selected_theme_icon == "☀️" else "Oscuro"
 
 
 def city_label(city):
@@ -846,6 +1138,17 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
         ),
         axis=1,
     )
+    df_valid_hours["recommendation_final"] = df_valid_hours.apply(
+        lambda row: apply_weather_safety_rules(
+            row,
+            activity,
+            row[source_recommendation_column],
+        ),
+        axis=1,
+    )
+
+    best_row = get_best_hour(df_valid_hours)
+    top_hours = get_top_hours(df_valid_hours, top_n=5)
 
     best_row = get_best_hour(df_valid_hours)
     top_hours = get_top_hours(df_valid_hours, top_n=5)
@@ -880,6 +1183,10 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
         "ml_error": ml_error,
     }, None
 
+def build_specific_hour_text(selected_hour_row, best_row):
+    """Genera un texto humano para la hora evaluada."""
+    if selected_hour_row is None:
+        return "No hay datos disponibles para la hora seleccionada."
 
 def build_specific_hour_text(selected_hour_row, best_row):
     """Genera un texto humano para la hora evaluada."""
@@ -913,21 +1220,28 @@ def render_section_header(title, subtitle=""):
 def render_hero():
     st.markdown(
         """
-        <div class="hero-card">
-            <div class="hero-kicker">Clima + ML + Seguridad</div>
-            <h1>OutByML</h1>
-            <h2>Tu asistente inteligente para decidir cuando salir.</h2>
-            <p>
-                Consulta el clima actualizado, elige una actividad y recibe una recomendacion clara
-                usando Machine Learning y reglas de seguridad climatica.
-            </p>
-            <div class="hero-badges">
-                <span class="hero-badge">Clima actualizado</span>
-                <span class="hero-badge">Modelo ML</span>
-                <span class="hero-badge">Reglas de seguridad</span>
-                <span class="hero-badge">Hora especifica</span>
+            <div class="hero-card">
+                <div class="hero-kicker">
+                    <span class="kicker-pill">CLIMA</span>
+                    <span class="kicker-pill">IA</span>
+                    <span class="kicker-pill">SEGURIDAD</span>
+                </div>
+                <h1>¿Salimos hoy?</h1>
+                <h2>El mejor momento para tu actividad, sin adivinar.</h2>
+                <p>
+                    Consulta el clima en tiempo real, elige una actividad
+                    y recibe una recomendación clara sobre cuándo salir,
+                    basada en análisis climático y aprendizaje automático.
+                </p>
+                <div class="hero-badges">
+                    <span class="hero-badge">🌤️ Clima en tiempo real</span>
+                    <span class="hero-badge">💎 Recomendación inteligente</span>
+                    <span class="hero-badge">🕐 Hora óptima</span>
+                </div>
+                <div class="hero-btn-wrapper">
+                    <a href="#elegir-actividad" class="hero-cta-btn">Elegir actividad</a>
+                </div>
             </div>
-        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -941,7 +1255,7 @@ def render_hero_banner():
     st.markdown(
         (
             '<div class="hero-banner" '
-            f'style=\'background-image: url("data:image/png;base64,{hero_image_base64}");\''
+            f'style=\'background-image: url("data:image/jpeg;base64,{hero_image_base64}");\''
             "></div>"
         ),
         unsafe_allow_html=True,
@@ -950,30 +1264,214 @@ def render_hero_banner():
 
 def render_how_it_works():
     render_section_header(
-        "Como funciona OutByML",
+        "Como funciona SalimosHoy?",
         "Una lectura sencilla del clima para tomar mejores decisiones antes de salir.",
     )
     st.markdown(
         """
         <div class="info-grid">
             <div class="info-card">
-                <div class="info-step">1</div>
+                <div class="analysis-badge">🌤️</div>
                 <h3>Consulta clima actualizado</h3>
                 <p>Obtiene datos horarios recientes de temperatura, lluvia, viento y humedad.</p>
             </div>
             <div class="info-card">
-                <div class="info-step">2</div>
+                <div class="analysis-badge">🌦️</div>
+                <h3>Predice el tipo de clima</h3>
+                <p>Usa ML para clasificar las condiciones meteorologicas en categorias de clima.</p>
+            </div>
+            <div class="info-card">
+                <div class="analysis-badge">🏃</div>
                 <h3>Evalua la actividad elegida</h3>
                 <p>Compara las condiciones disponibles con lo que necesita cada actividad.</p>
             </div>
             <div class="info-card">
-                <div class="info-step">3</div>
+                <div class="analysis-badge">🕐</div>
                 <h3>Clasifica la mejor hora</h3>
-                <p>Usa ML y reglas de seguridad para dar una recomendacion final mas realista.</p>
+                <p>Usa ML y analisis climatico para dar una recomendacion final mas realista.</p>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def render_ml_section():
+    render_section_header(
+        "Machine Learning en SalimosHoy?",
+        "Un modelo entrenado con datos reales para darte recomendaciones mas precisas.",
+    )
+    st.markdown(
+        """
+        <div class="info-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+            <div class="info-card" style="text-align:center;">
+                <div style="font-size:2.2rem; margin-bottom:0.5rem;">🌲</div>
+                <h3>Random Forest</h3>
+                <p>Modelo de clasificacion basado en multiples arboles de decision que votan en conjunto para una prediccion robusta.</p>
+            </div>
+            <div class="info-card" style="text-align:center;">
+                <div style="font-size:2.2rem; margin-bottom:0.5rem;">🎯</div>
+                <h3>96.6% Accuracy</h3>
+                <p>El modelo acierta en la gran mayoria de casos, especialmente identificando condiciones malas con 99% de precision.</p>
+            </div>
+            <div class="info-card" style="text-align:center;">
+                <div style="font-size:2.2rem; margin-bottom:0.5rem;">📊</div>
+                <h3>4 Categorias</h3>
+                <p>Clasifica cada hora como <strong>excelente</strong>, <strong>bueno</strong>, <strong>regular</strong> o <strong>malo</strong> segun las condiciones.</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    _, btn_col, _ = st.columns([1, 2, 1])
+    with btn_col:
+        if st.button(
+            "🔍 Detalles tecnicos del modelo de Machine Learning",
+            use_container_width=True,
+            key="go_ml_details",
+        ):
+            st.session_state["page"] = "ml_details"
+            st.rerun()
+
+
+def render_ml_details_page():
+    _, btn_col = st.columns([0.85, 0.15])
+    with btn_col:
+        if st.button("← Volver", key="back_from_ml"):
+            st.session_state["page"] = "main"
+            st.rerun()
+
+    render_section_header(
+        "Machine Learning en SalimosHoy?",
+        "Detalles tecnicos del modelo que impulsa las recomendaciones.",
+    )
+
+    st.markdown(
+        """
+        <div class="info-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+            <div class="info-card" style="text-align:center;">
+                <div style="font-size:2.2rem; margin-bottom:0.5rem;">🌲</div>
+                <h3>Random Forest</h3>
+                <p>Modelo de clasificacion basado en multiples arboles de decision que votan en conjunto para una prediccion robusta.</p>
+            </div>
+            <div class="info-card" style="text-align:center;">
+                <div style="font-size:2.2rem; margin-bottom:0.5rem;">🎯</div>
+                <h3>96.6% Accuracy</h3>
+                <p>El modelo acierta en la gran mayoria de casos, especialmente identificando condiciones malas con 99% de precision.</p>
+            </div>
+            <div class="info-card" style="text-align:center;">
+                <div style="font-size:2.2rem; margin-bottom:0.5rem;">📊</div>
+                <h3>4 Categorias</h3>
+                <p>Clasifica cada hora como <strong>excelente</strong>, <strong>bueno</strong>, <strong>regular</strong> o <strong>malo</strong> segun las condiciones.</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+
+    st.subheader("Que es Random Forest?")
+    st.markdown(
+        """
+        Random Forest es un algoritmo de **Machine Learning supervisado** que crea
+        cientos de arboles de decision, cada uno entrenado con una muestra aleatoria
+        de los datos. Cuando necesita clasificar una hora, **todos los arboles votan**
+        y la clase mas votada gana. Esto lo hace muy robusto y resistente al overfitting.
+        """
+    )
+
+    st.markdown("---")
+
+    st.subheader("Variables de entrada (Features)")
+    st.markdown(
+        """
+        El modelo recibe **13 variables** para cada hora del dia:
+
+        | Variable | Descripcion | Tipo |
+        |---|---|---|
+        | `temperature_2m` | Temperatura a 2 metros | Meteorologica |
+        | `apparent_temperature` | Sensacion termica | Meteorologica |
+        | `relative_humidity_2m` | Humedad relativa (%) | Meteorologica |
+        | `precipitation_probability` | Probabilidad de lluvia (%) | Meteorologica |
+        | `wind_speed_10m` | Velocidad del viento (km/h) | Meteorologica |
+        | `wind_gusts_10m` | Rachas de viento (km/h) | Meteorologica |
+        | `cloud_cover` | Cobertura de nubes (%) | Meteorologica |
+        | `uv_index` | Indice de radiacion UV | Meteorologica |
+        | `hour` | Hora del dia (0-23) | Temporal |
+        | `activity` | Actividad seleccionada | Contexto |
+        | `continent` | Continente de la ciudad | Geografico |
+        | `climate_group` | Grupo climatico | Geografico |
+        | `season_block` | Estacion del ano | Temporal |
+        """
+    )
+
+    st.markdown("---")
+
+    st.subheader("Rendimiento del modelo")
+
+    metric_cols = st.columns(4)
+    with metric_cols[0]:
+        st.metric("Accuracy (Train)", "97.39%")
+    with metric_cols[1]:
+        st.metric("Accuracy (Test)", "96.59%")
+    with metric_cols[2]:
+        st.metric("Mejor clase", "Malo: 99%")
+    with metric_cols[3]:
+        st.metric("Overfitting", "< 1%", delta="-0.8%", delta_color="normal")
+
+    st.markdown(
+        """
+        **Rendimiento por clase (test):**
+
+        | Clase | Precision | Recall | F1-Score | Soporte |
+        |---|---|---|---|---|
+        | Excelente | 0.93 | 0.93 | 0.93 | — |
+        | Bueno | 0.93 | 0.93 | 0.93 | — |
+        | Regular | 0.97 | 0.97 | 0.97 | — |
+        | Malo | 0.99 | 0.99 | 0.99 | — |
+        """
+    )
+
+    st.markdown("---")
+
+    st.subheader("Comparativa de modelos")
+    st.markdown(
+        """
+        Se evaluaron 3 modelos diferentes para encontrar el mejor clasificador:
+
+        | Modelo | Accuracy Train | Accuracy Test | Resultado |
+        |---|---|---|---|
+        | ✅ **Random Forest** | 97.39% | 96.59% | **Ganador** |
+        | Decision Tree | 89.50% | 89.43% | Aceptable |
+        | Logistic Regression | 51.55% | 50.17% | Insuficiente |
+
+        **Random Forest** fue el claro ganador, con la mejor accuracy y el menor
+        sobreajuste (diferencia train-test de solo 0.8%).
+
+        **Logistic Regression** no fue capaz de separar las clases correctamente,
+        lo que confirma que el problema no es linealmente separable.
+        """
+    )
+
+    st.markdown("---")
+
+    st.subheader("Datos de entrenamiento")
+    st.markdown(
+        """
+        El dataset fue generado con **datos meteorologicos reales** de la API de
+        [Open-Meteo](https://open-meteo.com/) para multiples ciudades y continentes.
+
+        **Proceso de creacion del dataset:**
+        1. Se recopilaron datos horarios de clima para ciudades representativas de cada continente
+        2. Se calcularon puntuaciones de actividad usando formulas de distancia al clima ideal
+        3. Se aplicaron filtros climaticos (lluvia intensa, viento extremo, temperaturas adversas)
+        4. Se generaron etiquetas finales: excelente, bueno, regular, malo
+
+        Estos filtros garantizan que el modelo aprende a penalizar condiciones
+        adversas, como lluvia fuerte para actividades al aire libre o temperaturas
+        extremas para deporte.
+        """
     )
 
 
@@ -986,32 +1484,32 @@ def render_analysis_scope():
         """
         <div class="analysis-grid">
             <div class="analysis-card">
-                <div class="analysis-badge">T°</div>
+                <div class="analysis-badge">🌡️</div>
                 <h3>Temperatura</h3>
                 <p>Calor o frio del ambiente.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">mm</div>
+                <div class="analysis-badge">🌧️</div>
                 <h3>Lluvia</h3>
                 <p>Riesgo de precipitacion.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">km/h</div>
+                <div class="analysis-badge">💨</div>
                 <h3>Viento</h3>
                 <p>Velocidad del aire.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">%</div>
+                <div class="analysis-badge">💧</div>
                 <h3>Humedad</h3>
                 <p>Sensacion de incomodidad.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">UV</div>
+                <div class="analysis-badge">☀️</div>
                 <h3>Indice UV</h3>
                 <p>Exposicion solar.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">h</div>
+                <div class="analysis-badge">🕐</div>
                 <h3>Hora del dia</h3>
                 <p>Momento disponible para salir.</p>
             </div>
@@ -1019,6 +1517,15 @@ def render_analysis_scope():
         """,
         unsafe_allow_html=True,
     )
+    _, btn_col, _ = st.columns([1, 2, 1])
+    with btn_col:
+        if st.button(
+            "🔍 Detalles tecnicos del modelo de Machine Learning",
+            use_container_width=True,
+            key="hero_ml_details",
+        ):
+            st.session_state["page"] = "ml_details"
+            st.rerun()
 
 
 def render_metric_card(label, value, caption=""):
@@ -1035,6 +1542,7 @@ def render_metric_card(label, value, caption=""):
 
 
 def render_search_area():
+    st.markdown('<div id="elegir-actividad"></div>', unsafe_allow_html=True)
     render_section_header(
         "Prepara tu consulta",
         "Selecciona ciudad, actividad y modo de decision para generar una recomendacion.",
@@ -1184,19 +1692,40 @@ def render_results(theme):
         unsafe_allow_html=True,
     )
 
-    map_col, chart_col = st.columns([1, 1.45])
+    map_col, activity_img_col = st.columns([1, 1])
     with map_col:
         with st.container(border=True, key="map_panel"):
             render_section_header("Ubicacion analizada")
-            deck = create_city_deck(
-                city.get("name", city_name),
-                city.get("country", ""),
-                city.get("latitude"),
-                city.get("longitude"),
+            lat = city.get("latitude")
+            lon = city.get("longitude")
+            name = city.get("name", city_name)
+            country = city.get("country", "")
+            query = f"{name}, {country}".replace(" ", "+")
+            st.markdown(
+                f'<iframe '
+                f'src="https://maps.google.com/maps?q={query}&ll={lat},{lon}&z=13&output=embed" '
+                f'width="100%" height="420" style="border:0; border-radius:12px;" '
+                f'allowfullscreen loading="lazy">'
+                f'</iframe>',
+                unsafe_allow_html=True,
             )
-            st.pydeck_chart(deck, use_container_width=True)
 
-    with chart_col:
+    with activity_img_col:
+        with st.container(border=True, key="activity_img_panel"):
+            render_section_header(activity)
+            activity_img_path = ACTIVITY_IMAGES.get(activity)
+            if activity_img_path and activity_img_path.exists():
+                activity_img_b64 = image_to_base64(activity_img_path)
+                if activity_img_b64:
+                    st.markdown(
+                        f'<img src="data:image/jpeg;base64,{activity_img_b64}" '
+                        f'style="width:100%; height:420px; object-fit:cover; border-radius:12px;" '
+                        f'alt="{activity}"/>',
+                        unsafe_allow_html=True,
+                    )
+
+    score_col, climate_col = st.columns(2)
+    with score_col:
         with st.container(border=True, key="score_panel"):
             render_section_header("Score por hora")
             st.plotly_chart(
@@ -1204,27 +1733,25 @@ def render_results(theme):
                 use_container_width=True,
             )
 
-    with st.container(border=True, key="chart_panel"):
-        render_section_header(
-            "Clima por variable",
-            "Consulta los factores que influyen en la recomendacion final.",
-        )
-        temp_tab, rain_tab, wind_tab = st.tabs(["Temperatura", "Lluvia", "Viento"])
-        with temp_tab:
-            st.plotly_chart(
-                create_temperature_chart(df_valid_hours, theme_template=theme_template),
-                use_container_width=True,
-            )
-        with rain_tab:
-            st.plotly_chart(
-                create_rain_chart(df_valid_hours, theme_template=theme_template),
-                use_container_width=True,
-            )
-        with wind_tab:
-            st.plotly_chart(
-                create_wind_chart(df_valid_hours, theme_template=theme_template),
-                use_container_width=True,
-            )
+    with climate_col:
+        with st.container(border=True, key="chart_panel"):
+            render_section_header("Clima por variable")
+            temp_tab, rain_tab, wind_tab = st.tabs(["Temperatura", "Lluvia", "Viento"])
+            with temp_tab:
+                st.plotly_chart(
+                    create_temperature_chart(df_valid_hours, theme_template=theme_template),
+                    use_container_width=True,
+                )
+            with rain_tab:
+                st.plotly_chart(
+                    create_rain_chart(df_valid_hours, theme_template=theme_template),
+                    use_container_width=True,
+                )
+            with wind_tab:
+                st.plotly_chart(
+                    create_wind_chart(df_valid_hours, theme_template=theme_template),
+                    use_container_width=True,
+                )
 
     with st.container(border=True, key="top_panel"):
         render_section_header(
@@ -1237,39 +1764,18 @@ def render_results(theme):
             hide_index=True,
         )
 
-    with st.expander("Ver detalles tecnicos"):
-        st.write(
-            "OutByML usa un modelo ML para clasificar condiciones climaticas, pero tambien "
-            "aplica reglas finales de seguridad para evitar recomendaciones poco realistas "
-            "en casos de lluvia, viento fuerte o temperatura extrema."
-        )
-        technical_details = {
-            "Ciudad": city_name,
-            "Actividad": activity,
-            "Hora inicial": settings["start_hour"],
-            "Hora final": settings["end_hour"],
-            "Temperatura ideal": settings["ideal_temperature"],
-            "Humedad ideal": settings["ideal_humidity"],
-            "Viento ideal": settings["ideal_wind"],
-            "UV ideal": settings["ideal_uv"],
-            "Recomendacion por reglas": result_row.get("recommendation", "sin clasificar"),
-            "Recomendacion final": result_row.get("recommendation_final", "sin clasificar"),
-        }
-        if "recommendation_ml" in result_row.index:
-            technical_details["Recomendacion ML"] = result_row.get(
-                "recommendation_ml",
-                "sin clasificar",
-            )
-        st.write(technical_details)
-
-
+   
 init_session_state()
 visual_theme = get_theme_mode()
 inject_styles(visual_theme)
 render_theme_menu()
-render_hero_banner()
-render_hero()
-render_how_it_works()
-render_analysis_scope()
-render_search_area()
-render_results(visual_theme)
+
+if st.session_state.get("page") == "ml_details":
+    render_ml_details_page()
+else:
+    render_hero_banner()
+    render_hero()
+    render_how_it_works()
+    render_analysis_scope()
+    render_search_area()
+    render_results(visual_theme)

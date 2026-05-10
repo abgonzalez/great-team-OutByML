@@ -3,9 +3,9 @@
 import math
 
 ACTIVITY_SETTINGS = {
-    "Pasear": {
+    "Pasear o hacer senderismo": {
         "start_hour": 7,
-        "end_hour": 22,
+        "end_hour": 21,
         "ideal_temperature": 22,
         "ideal_humidity": 50,
         "ideal_wind": 5,
@@ -16,20 +16,20 @@ ACTIVITY_SETTINGS = {
         "uv_weight": 1.0,
         "temperature_weight": 1.0,
     },
-    "Turismo": {
-        "start_hour": 8,
-        "end_hour": 20,
-        "ideal_temperature": 21,
-        "ideal_humidity": 50,
-        "ideal_wind": 6,
+    "Jardineria y agricultura": {
+        "start_hour": 7,
+        "end_hour": 19,
+        "ideal_temperature": 24,
+        "ideal_humidity": 55,
+        "ideal_wind": 8,
         "ideal_uv": 4,
-        "rain_weight": 1.2,
-        "wind_weight": 1.0,
-        "humidity_weight": 1.0,
-        "uv_weight": 1.0,
+        "rain_weight": 1.3,
+        "wind_weight": 0.8,
+        "humidity_weight": 1.2,
+        "uv_weight": 1.3,
         "temperature_weight": 1.2,
     },
-    "Deporte": {
+    "Deportes al aire libre": {
         "start_hour": 6,
         "end_hour": 21,
         "ideal_temperature": 18,
@@ -42,38 +42,51 @@ ACTIVITY_SETTINGS = {
         "uv_weight": 1.4,
         "temperature_weight": 1.5,
     },
-    "Bici": {
-        "start_hour": 7,
-        "end_hour": 21,
-        "ideal_temperature": 20,
+    "Picnic o actividades en parque": {
+        "start_hour": 9,
+        "end_hour": 20,
+        "ideal_temperature": 23,
         "ideal_humidity": 50,
-        "ideal_wind": 4,
+        "ideal_wind": 6,
         "ideal_uv": 4,
-        "rain_weight": 1.5,
-        "wind_weight": 1.5,
+        "rain_weight": 1.8,
+        "wind_weight": 1.2,
         "humidity_weight": 1.0,
         "uv_weight": 1.0,
         "temperature_weight": 1.0,
     },
-    "Lavar ropa": {
-        "start_hour": 9,
-        "end_hour": 18,
-        "ideal_temperature": 24,
-        "ideal_humidity": 35,
+    "Ir al cine": {
+        "start_hour": 10,
+        "end_hour": 23,
+        "ideal_temperature": 22,
+        "ideal_humidity": 50,
         "ideal_wind": 10,
+        "ideal_uv": 6,
+        "rain_weight": 0.3,
+        "wind_weight": 0.3,
+        "humidity_weight": 0.3,
+        "uv_weight": 0.3,
+        "temperature_weight": 0.3,
+    },
+    "Ir a la playa": {
+        "start_hour": 8,
+        "end_hour": 20,
+        "ideal_temperature": 28,
+        "ideal_humidity": 55,
+        "ideal_wind": 8,
         "ideal_uv": 5,
         "rain_weight": 2.0,
-        "wind_weight": 1.2,
-        "humidity_weight": 1.8,
-        "uv_weight": 1.0,
-        "temperature_weight": 1.0,
+        "wind_weight": 1.5,
+        "humidity_weight": 0.8,
+        "uv_weight": 1.5,
+        "temperature_weight": 1.2,
     },
 }
 
 
 def get_activity_settings(activity):
     """Devuelve la configuracion climatica para una actividad."""
-    return ACTIVITY_SETTINGS.get(activity, ACTIVITY_SETTINGS["Pasear"])
+    return ACTIVITY_SETTINGS.get(activity, ACTIVITY_SETTINGS["Pasear o hacer senderismo"])
 
 
 def safe_value(value, default):
@@ -193,16 +206,22 @@ def apply_weather_safety_rules(row, activity, recommendation):
     wind_speed = safe_value(row.get("wind_speed_10m"), 0)
     temperature = safe_value(row.get("temperature_2m"), 20)
 
-    outdoor_activities = ["Pasear", "Turismo", "Deporte", "Bici"]
-    wind_sensitive_activities = ["Bici", "Deporte", "Lavar ropa"]
+    outdoor_activities = [
+        "Pasear o hacer senderismo",
+        "Deportes al aire libre",
+        "Picnic o actividades en parque",
+        "Ir a la playa",
+        "Jardineria y agricultura",
+    ]
+    wind_sensitive_activities = [
+        "Deportes al aire libre",
+        "Ir a la playa",
+        "Picnic o actividades en parque",
+    ]
 
-    if activity == "Lavar ropa":
-        if rain_probability >= 60:
-            return "malo"
-        if rain_probability >= 40:
-            return "malo"
-        if rain_probability >= 20 and recommendation in ["excelente", "bueno"]:
-            recommendation = "regular"
+    if activity == "Ir al cine":
+        # Indoor activity - weather barely matters
+        return recommendation
     elif activity in outdoor_activities:
         if rain_probability >= 70:
             return "malo"
@@ -221,8 +240,12 @@ def apply_weather_safety_rules(row, activity, recommendation):
         if temperature >= 38 or temperature <= 0:
             return "malo"
 
-    if activity == "Deporte" and temperature >= 32:
+    if activity == "Deportes al aire libre" and temperature >= 32:
         if recommendation in ["excelente", "bueno"]:
+            recommendation = "regular"
+
+    if activity == "Ir a la playa":
+        if temperature < 20 and recommendation in ["excelente", "bueno"]:
             recommendation = "regular"
 
     return recommendation
