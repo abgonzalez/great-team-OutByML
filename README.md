@@ -1,10 +1,10 @@
-# OutByML - Recomendador de Actividades según el Clima
+# SalimosHoy? - Recomendador de Actividades según el Clima
 
 Aplicación web que recomienda la mejor hora del día para realizar una actividad al aire libre, basándose en datos meteorológicos en tiempo real de la API de Open-Meteo.
 
 ## Descripción
 
-OutByML permite al usuario:
+SalimosHoy? permite al usuario:
 
 1. Buscar una ciudad por nombre (usando la API de geocodificación de Open-Meteo).
 2. Seleccionar una actividad: Pasear, Turismo, Deporte, Bici o Lavar ropa.
@@ -121,11 +121,35 @@ Para desplegar la aplicación de forma gratuita en [Streamlit Cloud](https://str
 2. Ve a [share.streamlit.io](https://share.streamlit.io) e inicia sesión con tu cuenta de GitHub.
 3. Haz clic en **"New app"** y selecciona:
    - **Repositorio:** tu repositorio de GitHub.
-   - **Rama:** `main` (o la rama principal).
+   - **Rama:** `master` (o la rama principal).
    - **Archivo principal:** `app.py`
 4. Haz clic en **Deploy** y espera a que la aplicación se construya.
 
 Esta aplication esta publicada en: `https://outbyml.streamlit.app/`
+
+
+## Despliegue en Render
+
+1. Ve a [https://render.com](https://render.com) y regístrate o inicia sesión
+2. Haz clic en **"New +"** → **"Web Service"**
+3. Conecta tu cuenta de GitHub y selecciona el repositorio
+4. Configura el servicio:
+
+| Configuración | Valor |
+|---------------|-------|
+| **Name** | `salimosHoy` |
+| **Runtime** | Python |
+| **Branch** | `master` |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true` |
+
+5. Haz clic en **"Create Web Service"**
+
+Una vez desplegada, la aplicación estará disponible en una URL proporcionada por Render, algo como:
+```
+https://salimoshoy.onrender.com
+```
+
 
 ## Estructura del proyecto
 
