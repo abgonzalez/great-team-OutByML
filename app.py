@@ -172,6 +172,40 @@ def inject_styles(theme):
             if hero_bg_base64
             else "linear-gradient(180deg, var(--panel), var(--panel-soft))"
         )
+    else:
+        colors = {
+            "bg": "#F8FAFC",
+            "bg_layer": "linear-gradient(180deg, #F6FAFD 0%, #F8FAFC 100%)",
+            "panel": "#FFFFFF",
+            "panel_soft": "#F1F8FE",
+            "border": "#D8E1EA",
+            "text": "#102033",
+            "muted": "#52616B",
+            "accent": "#2F80ED",
+            "accent_2": "#38BDF8",
+            "hero_subtitle": "#24415F",
+            "input_bg": "#FFFFFF",
+            "button_text": "#FFFFFF",
+            "recommendation_bg": "rgba(47, 128, 237, 0.08)",
+            "recommendation_text": "#102033",
+            "hero_title_shadow": (
+                "0 2px 0 rgba(255, 255, 255, 0.85), "
+                "0 8px 24px rgba(14, 165, 233, 0.20), "
+                "0 18px 45px rgba(15, 23, 42, 0.10)"
+            ),
+            "hero_visual": (
+                "radial-gradient(circle at 30% 24%, rgba(47, 128, 237, 0.24), transparent 24%), "
+                "radial-gradient(circle at 68% 72%, rgba(65, 199, 185, 0.20), transparent 20%), "
+                "linear-gradient(145deg, rgba(255,255,255,0.96), rgba(224,244,255,0.82))"
+            ),
+            "shadow": "0 16px 38px rgba(16, 32, 51, 0.10)",
+        }
+        hero_card_background = (
+            f'linear-gradient(180deg, rgba(248,250,252,0.88), rgba(224,242,254,0.88)), '
+            f'url("data:image/jpeg;base64,{hero_bg_base64}")'
+            if hero_bg_base64
+            else "linear-gradient(180deg, var(--panel), var(--panel-soft))"
+        )
 
     css = """
         <style>
@@ -1104,6 +1138,17 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
         ),
         axis=1,
     )
+    df_valid_hours["recommendation_final"] = df_valid_hours.apply(
+        lambda row: apply_weather_safety_rules(
+            row,
+            activity,
+            row[source_recommendation_column],
+        ),
+        axis=1,
+    )
+
+    best_row = get_best_hour(df_valid_hours)
+    top_hours = get_top_hours(df_valid_hours, top_n=5)
 
     best_row = get_best_hour(df_valid_hours)
     top_hours = get_top_hours(df_valid_hours, top_n=5)
@@ -1138,6 +1183,10 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
         "ml_error": ml_error,
     }, None
 
+def build_specific_hour_text(selected_hour_row, best_row):
+    """Genera un texto humano para la hora evaluada."""
+    if selected_hour_row is None:
+        return "No hay datos disponibles para la hora seleccionada."
 
 def build_specific_hour_text(selected_hour_row, best_row):
     """Genera un texto humano para la hora evaluada."""
