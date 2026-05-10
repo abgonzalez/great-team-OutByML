@@ -16,7 +16,6 @@ from src.features import (
     get_valid_hours,
 )
 from src.geocoding import search_city
-from src.mapping import create_city_deck
 from src.recommendations import (
     generate_recommendation_text,
     get_best_hour,
