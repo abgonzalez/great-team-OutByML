@@ -83,9 +83,9 @@ def build_weather_dataframe(weather_data):
 
 def get_activity_settings(activity):
     activities = {
-        "Pasear": {
+        "Pasear o hacer senderismo": {
             "start_hour": 7,
-            "end_hour": 22,
+            "end_hour": 21,
             "ideal_temperature": 22,
             "ideal_humidity": 50,
             "ideal_wind": 5,
@@ -96,20 +96,20 @@ def get_activity_settings(activity):
             "uv_weight": 1.0,
             "temperature_weight": 1.0,
         },
-        "Turismo": {
-            "start_hour": 8,
-            "end_hour": 20,
-            "ideal_temperature": 21,
-            "ideal_humidity": 50,
-            "ideal_wind": 6,
+        "Jardineria y agricultura": {
+            "start_hour": 7,
+            "end_hour": 19,
+            "ideal_temperature": 24,
+            "ideal_humidity": 55,
+            "ideal_wind": 8,
             "ideal_uv": 4,
-            "rain_weight": 1.2,
-            "wind_weight": 1.0,
-            "humidity_weight": 1.0,
-            "uv_weight": 1.0,
+            "rain_weight": 1.3,
+            "wind_weight": 0.8,
+            "humidity_weight": 1.2,
+            "uv_weight": 1.3,
             "temperature_weight": 1.2,
         },
-        "Deporte": {
+        "Deportes al aire libre": {
             "start_hour": 6,
             "end_hour": 21,
             "ideal_temperature": 18,
@@ -122,58 +122,73 @@ def get_activity_settings(activity):
             "uv_weight": 1.4,
             "temperature_weight": 1.5,
         },
-        "Bici": {
-            "start_hour": 7,
-            "end_hour": 21,
-            "ideal_temperature": 20,
+        "Picnic o actividades en parque": {
+            "start_hour": 9,
+            "end_hour": 20,
+            "ideal_temperature": 23,
             "ideal_humidity": 50,
-            "ideal_wind": 4,
+            "ideal_wind": 6,
             "ideal_uv": 4,
-            "rain_weight": 1.5,
-            "wind_weight": 1.5,
+            "rain_weight": 1.8,
+            "wind_weight": 1.2,
             "humidity_weight": 1.0,
             "uv_weight": 1.0,
             "temperature_weight": 1.0,
         },
-        "Lavar ropa": {
-            "start_hour": 9,
-            "end_hour": 18,
-            "ideal_temperature": 24,
-            "ideal_humidity": 35,
+        "Ir al cine": {
+            "start_hour": 10,
+            "end_hour": 23,
+            "ideal_temperature": 22,
+            "ideal_humidity": 50,
             "ideal_wind": 10,
+            "ideal_uv": 6,
+            "rain_weight": 0.3,
+            "wind_weight": 0.3,
+            "humidity_weight": 0.3,
+            "uv_weight": 0.3,
+            "temperature_weight": 0.3,
+        },
+        "Ir a la playa": {
+            "start_hour": 8,
+            "end_hour": 20,
+            "ideal_temperature": 28,
+            "ideal_humidity": 55,
+            "ideal_wind": 8,
             "ideal_uv": 5,
             "rain_weight": 2.0,
-            "wind_weight": 1.2,
-            "humidity_weight": 1.8,
-            "uv_weight": 1.0,
-            "temperature_weight": 1.0,
+            "wind_weight": 1.5,
+            "humidity_weight": 0.8,
+            "uv_weight": 1.5,
+            "temperature_weight": 1.2,
         },
     }
 
-    return activities.get(activity, activities["Pasear"])
+    return activities.get(activity, activities["Pasear o hacer senderismo"])
 
 
 def choose_activity():
     activities = {
-        "1": "Pasear",
-        "2": "Turismo",
-        "3": "Deporte",
-        "4": "Bici",
-        "5": "Lavar ropa",
+        "1": "Pasear o hacer senderismo",
+        "2": "Jardineria y agricultura",
+        "3": "Deportes al aire libre",
+        "4": "Picnic o actividades en parque",
+        "5": "Ir al cine",
+        "6": "Ir a la playa",
     }
 
     print("\nSelecciona una actividad:")
-    print("1. Pasear")
-    print("2. Turismo")
-    print("3. Deporte")
-    print("4. Bici")
-    print("5. Lavar ropa")
+    print("1. Pasear o hacer senderismo")
+    print("2. Jardineria y agricultura")
+    print("3. Deportes al aire libre")
+    print("4. Picnic o actividades en parque")
+    print("5. Ir al cine")
+    print("6. Ir a la playa")
 
     selected_option = input("Actividad: ").strip()
 
     if selected_option not in activities:
         print("Opcion no valida. Se usara Pasear por defecto.")
-        return "Pasear"
+        return "Pasear o hacer senderismo"
 
     return activities[selected_option]
 

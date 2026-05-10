@@ -3,9 +3,12 @@
 import plotly.express as px
 
 
+CHART_HEIGHT = 400
+
+
 def create_score_chart(df, theme_template="plotly_white"):
     """Crea un grafico de puntuacion por hora."""
-    return px.line(
+    fig = px.line(
         df,
         x="hour",
         y="activity_score",
@@ -14,11 +17,13 @@ def create_score_chart(df, theme_template="plotly_white"):
         labels={"hour": "Hora", "activity_score": "Score"},
         template=theme_template,
     )
+    fig.update_layout(height=CHART_HEIGHT)
+    return fig
 
 
 def create_temperature_chart(df, theme_template="plotly_white"):
     """Crea un grafico de temperatura por hora."""
-    return px.line(
+    fig = px.line(
         df,
         x="hour",
         y="temperature_2m",
@@ -27,6 +32,8 @@ def create_temperature_chart(df, theme_template="plotly_white"):
         labels={"hour": "Hora", "temperature_2m": "Temperatura"},
         template=theme_template,
     )
+    fig.update_layout(height=CHART_HEIGHT)
+    return fig
 
 
 def create_rain_chart(df, theme_template="plotly_white"):
@@ -44,12 +51,13 @@ def create_rain_chart(df, theme_template="plotly_white"):
         template=theme_template,
     )
     fig.update_yaxes(range=[0, 100])
+    fig.update_layout(height=CHART_HEIGHT)
     return fig
 
 
 def create_wind_chart(df, theme_template="plotly_white"):
     """Crea un grafico de viento por hora."""
-    return px.line(
+    fig = px.line(
         df,
         x="hour",
         y="wind_speed_10m",
@@ -58,3 +66,5 @@ def create_wind_chart(df, theme_template="plotly_white"):
         labels={"hour": "Hora", "wind_speed_10m": "Viento km/h"},
         template=theme_template,
     )
+    fig.update_layout(height=CHART_HEIGHT)
+    return fig

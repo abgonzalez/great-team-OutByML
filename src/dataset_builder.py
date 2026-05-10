@@ -37,7 +37,15 @@ ARCHIVE_FALLBACK_VARIABLES = [
     "shortwave_radiation",
 ]
 
-ACTIVITIES = ["Pasear", "Turismo", "Deporte", "Bici", "Lavar ropa"]
+ACTIVITIES = [
+    "Pasear o hacer senderismo",
+    "Jardineria y agricultura",
+    "Deportes al aire libre",
+    "Picnic o actividades en parque",
+    "Ir al cine",
+    "Ir a la playa",
+    "Esquiar o deportes de invierno",
+]
 
 SAMPLE_CITIES = [
     {

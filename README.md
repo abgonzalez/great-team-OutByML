@@ -13,11 +13,13 @@ OutByML permite al usuario:
 
 ## Actividades iniciales
 
-- Pasear
-- Turismo
-- Deporte
-- Bici
-- Lavar ropa
+   "Pasear o hacer senderismo",
+    "Jardineria y agricultura",
+    "Deportes al aire libre",
+    "Picnic o actividades en parque",
+    "Ir al cine",
+    "Ir a la playa",
+    "Esquiar o deportes de invierno"
 
 ## Tecnologias usadas
 
@@ -48,6 +50,9 @@ cd project
 ### 2. Crear un entorno virtual
 
 ```bash
+
+python3 -m venv env
+
 
 ```
 
@@ -80,6 +85,21 @@ streamlit run app.py
 ```
 
 La aplicación se abrirá automáticamente en tu navegador en `http://localhost:8501`.
+
+### 5. Desactivar el entorno virtual
+
+**macOS / Linux:**
+
+```bash
+source env/bin/deactivate
+```
+
+**Windows:**
+
+```bash
+env\Scripts\deactivate
+```
+
 
 ### Flujo de uso
 
