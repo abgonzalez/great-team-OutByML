@@ -133,10 +133,10 @@ def inject_styles(theme):
             "shadow": "0 18px 48px rgba(0, 0, 0, 0.28)",
         }
         hero_card_background = (
-            f'linear-gradient(180deg, rgba(8,18,35,0.82), rgba(12,27,50,0.88)), '
+            f'linear-gradient(180deg, #111E30, #172A42), '
             f'url("data:image/jpeg;base64,{hero_bg_base64}")'
             if hero_bg_base64
-            else "linear-gradient(180deg, var(--panel), var(--panel-soft))"
+            else "linear-gradient(180deg, #111E30, #172A42)"
         )
     else:
         colors = {
@@ -145,8 +145,8 @@ def inject_styles(theme):
             "panel": "#FFFFFF",
             "panel_soft": "#FFF9EF",
             "border": "rgba(234, 206, 160, 0.45)",
-            "text": "#1A2B3D",
-            "muted": "#5A6B78",
+            "text": "#111111",
+            "muted": "#333333",
             "accent": "#F59E0B",
             "accent_2": "#38BDF8",
             "hero_subtitle": "#3D5A7A",
@@ -283,7 +283,7 @@ def inject_styles(theme):
                 margin: 0 auto 0.7rem auto;
                 letter-spacing: 0;
                 font-weight: 900;
-                color: #111111;
+                color: var(--text);
                 text-shadow: var(--hero-title-shadow);
             }
 
@@ -293,13 +293,13 @@ def inject_styles(theme):
                 font-weight: 750;
                 line-height: 1.3;
                 margin: 0 auto 0.75rem auto;
-                color: #222222;
+                color: var(--muted);
             }
 
             .hero-card p {
                 max-width: 960px;
                 margin: 0 auto;
-                color: #333333;
+                color: var(--text);
                 font-size: 1.15rem;
                 line-height: 1.65;
             }
@@ -321,19 +321,19 @@ def inject_styles(theme):
                 display: inline-block;
                 padding: 0.85rem 2.8rem;
                 border-radius: 999px;
-                background: linear-gradient(135deg, #F5A623, #F7C948);
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
                 color: #FFFFFF;
                 font-size: 1.1rem;
                 font-weight: 800;
                 letter-spacing: 0.3px;
                 text-decoration: none;
-                box-shadow: 0 10px 28px rgba(245, 166, 35, 0.3);
+                box-shadow: 0 10px 28px rgba(45, 181, 160, 0.3);
                 transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease, filter 200ms ease;
             }
 
             .hero-cta-btn:hover {
                 transform: translateY(-3px) scale(1.02);
-                box-shadow: 0 14px 36px rgba(245, 166, 35, 0.4);
+                box-shadow: 0 14px 36px rgba(45, 181, 160, 0.4);
                 filter: brightness(1.08);
                 color: #FFFFFF;
                 text-decoration: none;
@@ -359,16 +359,24 @@ def inject_styles(theme):
             }
 
             .section-title {
-                font-size: clamp(1.5rem, 2.8vw, 2rem);
+                font-size: clamp(1.7rem, 3vw, 2.3rem);
                 font-weight: 800;
                 margin: 1.5rem 0 0.3rem 0;
-                color: #111111;
+                color: var(--text);
                 text-align: center;
             }
 
             .section-subtitle {
                 margin: 0 0 0.85rem 0;
-                color: #333333;
+                color: var(--muted);
+                font-size: 1.15rem;
+                line-height: 1.55;
+                text-align: center;
+            }
+
+            .section-subtitle {
+                margin: 0 0 0.85rem 0;
+                color: var(--text);
                 font-size: 1.05rem;
                 line-height: 1.55;
                 text-align: center;
@@ -450,48 +458,50 @@ def inject_styles(theme):
             }
 
             .analysis-badge {
-                width: 3rem;
-                min-width: 3rem;
-                height: 3rem;
+                width: 4.5rem;
+                min-width: 4.5rem;
+                height: 4.5rem;
                 display: grid;
                 place-items: center;
-                border-radius: 9px;
+                border-radius: 999px;
                 margin-bottom: 1rem;
-                background: linear-gradient(135deg, var(--accent), var(--accent-2));
-                color: var(--button-text);
-                font-weight: 850;
-                font-size: 1rem;
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
+                font-size: 2.4rem;
+                line-height: 1;
+                border: none;
+                box-shadow: 0 6px 16px rgba(45, 181, 160, 0.35);
+                transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 300ms ease;
+            }
+
+            .analysis-card:hover .analysis-badge {
+                transform: scale(1.15);
+                box-shadow: 0 0 0 5px rgba(45, 181, 160, 0.2), 0 10px 24px rgba(45, 181, 160, 0.4);
+            }
                 line-height: 1;
                 box-shadow: 0 4px 12px rgba(47, 128, 237, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
                 transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 300ms ease;
             }
 
-            .analysis-card:hover .analysis-badge {
-                transform: scale(1.1);
-                box-shadow: 0 0 0 4px rgba(47, 128, 237, 0.2), 0 8px 16px rgba(47, 128, 237, 0.4);
-                animation: pulse 2s infinite;
-            }
-            
-            @keyframes pulse {
-                0% { box-shadow: 0 0 0 0 rgba(47, 128, 237, 0.4); }
-                70% { box-shadow: 0 0 0 10px rgba(47, 128, 237, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(47, 128, 237, 0); }
-            }
-
             .info-step {
-                width: 2.8rem;
-                height: 2.8rem;
+                width: 5.5rem;
+                height: 5.5rem;
                 display: grid;
                 place-items: center;
-                border-radius: 9px;
+                border-radius: 999px;
                 margin-bottom: 0.85rem;
-                background: linear-gradient(135deg, var(--accent), var(--accent-2));
-                font-size: 1.3rem;
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
+                font-size: 3rem;
                 line-height: 1;
-                box-shadow: 0 4px 10px rgba(47, 128, 237, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+                border: none;
                 position: relative;
                 z-index: 2;
-                border: 2px solid var(--panel);
+                box-shadow: 0 6px 16px rgba(45, 181, 160, 0.35);
+                transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 300ms ease;
+            }
+            
+            .info-card:hover .info-step {
+                transform: scale(1.15);
+                box-shadow: 0 0 0 5px rgba(45, 181, 160, 0.2), 0 10px 24px rgba(45, 181, 160, 0.4);
             }
             
             .info-card:hover .info-step {
@@ -505,7 +515,7 @@ def inject_styles(theme):
             .info-grid::before {
                 content: '';
                 position: absolute;
-                top: 2.6rem; /* aligns with center of step badge */
+                top: 3.5rem;
                 left: 10%;
                 right: 10%;
                 height: 2px;
@@ -520,13 +530,13 @@ def inject_styles(theme):
                 font-weight: 800;
                 line-height: 1.3;
                 text-align: center;
-                color: #111111;
+                color: var(--text);
             }
 
             .info-card p,
             .analysis-card p {
                 margin: 0;
-                color: #222222;
+                color: var(--muted);
                 font-size: 1rem;
                 line-height: 1.5;
                 text-align: center;
@@ -558,13 +568,13 @@ def inject_styles(theme):
 
             .metric-label {
                 margin: 0 0 0.35rem 0;
-                color: #222222;
+                color: var(--muted);
                 font-size: 1rem;
             }
 
             .metric-value {
                 margin: 0;
-                color: #111111;
+                color: var(--text);
                 font-size: clamp(1.45rem, 3.2vw, 2.25rem);
                 font-weight: 750;
                 line-height: 1.15;
@@ -573,7 +583,7 @@ def inject_styles(theme):
 
             .metric-caption {
                 margin: 0.45rem 0 0 0;
-                color: #222222;
+                color: var(--muted);
                 font-size: 1rem;
                 line-height: 1.35;
             }
@@ -601,18 +611,18 @@ def inject_styles(theme):
             .stButton > button {
                 border-radius: 999px;
                 border: none;
-                background: linear-gradient(135deg, #F5A623, #F7C948);
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
                 color: #FFFFFF;
                 font-weight: 750;
                 min-height: 2.9rem;
-                box-shadow: 0 6px 18px rgba(245, 166, 35, 0.25);
+                box-shadow: 0 6px 18px rgba(45, 181, 160, 0.25);
                 transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
             }
 
             .stButton > button:hover {
                 filter: brightness(1.06);
                 transform: translateY(-2px);
-                box-shadow: 0 10px 24px rgba(245, 166, 35, 0.35);
+                box-shadow: 0 10px 24px rgba(45, 181, 160, 0.35);
                 color: #FFFFFF;
             }
 
@@ -622,8 +632,23 @@ def inject_styles(theme):
                 border-color: var(--border);
                 background-color: var(--input-bg);
                 color: var(--text);
-                min-height: 2.75rem;
+                min-height: 3.2rem;
+                font-size: 1.25rem;
                 transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            }
+
+            [data-testid="stWidgetLabel"] label,
+            [data-testid="stWidgetLabel"] p {
+                color: var(--text) !important;
+                font-size: 1.2rem !important;
+                font-weight: 700 !important;
+            }
+
+            .st-key-control_card p,
+            .st-key-control_card span,
+            .st-key-control_card div {
+                font-size: 1.1rem;
+                color: var(--text);
             }
 
             div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
@@ -738,7 +763,7 @@ def inject_styles(theme):
             /* Better button prominence inside control card */
             .st-key-control_card .stButton > button {
                 margin-top: 1rem;
-                background: linear-gradient(135deg, #F5A623, #F7C948);
+                background: linear-gradient(135deg, #2DB5A0, #5CC8B5);
                 border: none;
                 border-radius: 999px;
                 color: #FFFFFF;
@@ -746,13 +771,13 @@ def inject_styles(theme):
                 font-weight: 800;
                 letter-spacing: 0.3px;
                 min-height: 3.2rem;
-                box-shadow: 0 8px 24px rgba(245, 166, 35, 0.3);
+                box-shadow: 0 8px 24px rgba(45, 181, 160, 0.3);
                 transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease, filter 200ms ease;
             }
 
             .st-key-control_card .stButton > button:hover {
                 transform: translateY(-3px) scale(1.01);
-                box-shadow: 0 14px 32px rgba(245, 166, 35, 0.4);
+                box-shadow: 0 14px 32px rgba(45, 181, 160, 0.4);
                 filter: brightness(1.08);
             }
 
@@ -1197,22 +1222,22 @@ def render_how_it_works():
         """
         <div class="info-grid">
             <div class="info-card">
-                <div class="info-step">🌤️</div>
+                <div class="analysis-badge">🌤️</div>
                 <h3>Consulta clima actualizado</h3>
                 <p>Obtiene datos horarios recientes de temperatura, lluvia, viento y humedad.</p>
             </div>
             <div class="info-card">
-                <div class="info-step">🌦️</div>
+                <div class="analysis-badge">🌦️</div>
                 <h3>Predice el tipo de clima</h3>
                 <p>Usa ML para clasificar las condiciones meteorologicas en categorias de clima.</p>
             </div>
             <div class="info-card">
-                <div class="info-step">🏃</div>
+                <div class="analysis-badge">🏃</div>
                 <h3>Evalua la actividad elegida</h3>
                 <p>Compara las condiciones disponibles con lo que necesita cada actividad.</p>
             </div>
             <div class="info-card">
-                <div class="info-step">🕐</div>
+                <div class="analysis-badge">🕐</div>
                 <h3>Clasifica la mejor hora</h3>
                 <p>Usa ML y analisis climatico para dar una recomendacion final mas realista.</p>
             </div>
@@ -1410,32 +1435,32 @@ def render_analysis_scope():
         """
         <div class="analysis-grid">
             <div class="analysis-card">
-                <div class="analysis-badge">T°</div>
+                <div class="analysis-badge">🌡️</div>
                 <h3>Temperatura</h3>
                 <p>Calor o frio del ambiente.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">mm</div>
+                <div class="analysis-badge">🌧️</div>
                 <h3>Lluvia</h3>
                 <p>Riesgo de precipitacion.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">km/h</div>
+                <div class="analysis-badge">💨</div>
                 <h3>Viento</h3>
                 <p>Velocidad del aire.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">%</div>
+                <div class="analysis-badge">💧</div>
                 <h3>Humedad</h3>
                 <p>Sensacion de incomodidad.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">UV</div>
+                <div class="analysis-badge">☀️</div>
                 <h3>Indice UV</h3>
                 <p>Exposicion solar.</p>
             </div>
             <div class="analysis-card">
-                <div class="analysis-badge">h</div>
+                <div class="analysis-badge">🕐</div>
                 <h3>Hora del dia</h3>
                 <p>Momento disponible para salir.</p>
             </div>
