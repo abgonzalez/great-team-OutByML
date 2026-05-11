@@ -137,7 +137,7 @@ def inject_styles(theme):
             if hero_bg_base64
             else "linear-gradient(180deg, #111E30, #172A42)"
         )
-    else:
+    elif theme == "Cálido":
         colors = {
             "bg": "#FFFDF8",
             "bg_layer": "linear-gradient(180deg, #FFFEF9 0%, #FFF8EC 100%)",
