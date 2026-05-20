@@ -1,0 +1,33 @@
+# SalimosHoy? - Demo GitHub
+
+Este paquete contiene la version demo/GitHub limpia para ejecutar la aplicacion web con el modelo ligero oficial.
+
+Incluye:
+- app.py
+- src/
+- assets/
+- README.md
+- requirements.txt
+- .gitignore
+- modelo ligero oficial: models/light/salimoshoy_rf_100_depth16_compressed.pkl
+
+Metricas del modelo ligero:
+- Peso: 28.49 MB
+- Accuracy test: 0.994267
+- Recall malo: 0.992699
+- Recall regular: 0.992456
+
+No incluye:
+- .venv/
+- datasets grandes
+- modelos pesados
+- notebooks intermedios
+- scripts de entrenamiento
+- cache
+
+Para ejecutar:
+
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m streamlit run app.py

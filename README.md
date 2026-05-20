@@ -1,185 +1,228 @@
-# SalimosHoy? - Recomendador de Actividades según el Clima
+# SalimosHoy? - Demo GitHub
 
-Aplicación web que recomienda la mejor hora del día para realizar una actividad al aire libre, basándose en datos meteorológicos en tiempo real de la API de Open-Meteo.
+SalimosHoy? es una app web en Streamlit que ayuda a decidir si conviene hacer una actividad en una ciudad y hora concreta usando clima actualizado, Machine Learning y reglas finales de seguridad climatica.
 
-## Descripción
+Esta version demo/GitHub esta preparada para usar un unico modelo ligero optimizado para repositorios normales de GitHub.
 
-SalimosHoy? permite al usuario:
+---
 
-1. Buscar una ciudad por nombre (usando la API de geocodificación de Open-Meteo).
-2. Seleccionar una actividad: Pasear, Turismo, Deporte, Bici o Lavar ropa.
-3. Obtener la mejor franja horaria del día según las condiciones climáticas (temperatura, humedad, viento, lluvia, índice UV).
-4. Visualizar gráficos interactivos del clima por hora y un mapa de la ciudad seleccionada.
+## Modelo oficial de la demo
 
-## Actividades iniciales
+La app carga este modelo:
 
-   "Pasear o hacer senderismo",
-    "Jardineria y agricultura",
-    "Deportes al aire libre",
-    "Picnic o actividades en parque",
-    "Ir al cine",
-    "Ir a la playa",
-    "Esquiar o deportes de invierno"
-
-## Tecnologias usadas
-
-- Python
-- Requests
-- Pandas
-- Streamlit
-- Plotly
-- Pydeck
-- Open-Meteo Geocoding API
-- Open-Meteo Forecast API
-
-## Requisitos previos
-
-- **Python 3.12** o superior
-- **pip** (gestor de paquetes de Python)
-- Conexión a internet (para consultar las APIs de clima y geocodificación)
-
-## Instalación
-
-### 1. Clonar o descargar el proyecto
-
-```bash
-git clone <url-del-repositorio>
-cd project
+```text
+models/light/salimoshoy_rf_100_depth16_compressed.pkl
 ```
 
-### 2. Crear un entorno virtual
+Metricas del modelo ligero:
 
-```bash
+| Metrica | Valor |
+|---|---:|
+| Peso | 28.49 MB |
+| Accuracy test | 0.994267 |
+| Recall malo | 0.992699 |
+| Recall regular | 0.992456 |
 
-python3 -m venv env
+El clima viene de Open-Meteo. El modelo no predice el clima: clasifica las condiciones climaticas disponibles para la actividad elegida y devuelve una recomendacion entre **malo**, **regular**, **bueno** y **excelente**.
 
+El dataset completo y los modelos pesados forman parte del respaldo tecnico del proyecto, pero no son necesarios para ejecutar esta demo ligera.
 
+---
+
+## Como funciona
+
+Flujo principal:
+
+```text
+Usuario selecciona ciudad y actividad
+↓
+El catalogo interno de 200 ciudades aporta coordenadas y metadata
+↓
+Open-Meteo Forecast API obtiene clima actualizado por hora
+↓
+La app prepara las 13 features del modelo
+↓
+El modelo clasifica las condiciones para la actividad
+↓
+Reglas finales de seguridad ajustan casos extremos
+↓
+La app muestra recommendation_final, mapa, graficos y Top 5
 ```
 
-### 3. Activar el entorno virtual
+Las reglas finales evitan recomendaciones poco realistas ante lluvia fuerte, viento fuerte o temperaturas extremas.
 
-**macOS / Linux:**
+---
 
-```bash
-source env/bin/activate
-```
+## Features del modelo
 
-**Windows:**
+Features numericas:
 
-```bash
-env\Scripts\activate
-```
+- `temperature_2m`
+- `apparent_temperature`
+- `relative_humidity_2m`
+- `precipitation_probability`
+- `wind_speed_10m`
+- `wind_gusts_10m`
+- `cloud_cover`
+- `uv_index`
+- `hour`
 
-### 4. Instalar las dependencias
+Features categoricas:
 
-```bash
-pip install -r requirements.txt
-```
+- `activity`
+- `continent`
+- `climate_group`
+- `season_block`
 
-## Ejecución en local
+Target de entrenamiento:
 
-Con el entorno virtual activado, ejecuta la aplicación web:
+- `recommendation`
 
-```bash
-streamlit run app.py
-```
+Columnas que no se usan como features:
 
-La aplicación se abrirá automáticamente en tu navegador en `http://localhost:8501`.
+- `activity_score`
+- `comfort_distance`
+- `recommendation`
+- `time`
+- `city`
+- `country`
+- `latitude`
+- `longitude`
+- `timezone`
 
-### 5. Desactivar el entorno virtual
-
-**macOS / Linux:**
-
-```bash
-source env/bin/deactivate
-```
-
-**Windows:**
-
-```bash
-env\Scripts\deactivate
-```
-
-
-### Flujo de uso
-
-1. En el panel lateral, escribe el nombre de una ciudad.
-2. Selecciona una actividad del desplegable.
-3. Presiona el botón **Buscar**.
-4. Selecciona la ciudad correcta de los resultados.
-5. La aplicación mostrará:
-   - La mejor hora recomendada con su puntuación.
-   - El top 5 de mejores horas en una tabla.
-   - Gráficos interactivos de temperatura, lluvia, viento y score por hora.
-   - Un mapa interactivo con la ubicación de la ciudad.
-
-## Despliegue en Streamlit Cloud
-
-Para desplegar la aplicación de forma gratuita en [Streamlit Cloud](https://streamlit.io/cloud):
-
-1. Sube el proyecto a un repositorio de GitHub (asegúrate de **no** incluir la carpeta `env/`).
-2. Ve a [share.streamlit.io](https://share.streamlit.io) e inicia sesión con tu cuenta de GitHub.
-3. Haz clic en **"New app"** y selecciona:
-   - **Repositorio:** tu repositorio de GitHub.
-   - **Rama:** `master` (o la rama principal).
-   - **Archivo principal:** `app.py`
-4. Haz clic en **Deploy** y espera a que la aplicación se construya.
-
-Esta aplication esta publicada en: `https://outbyml.streamlit.app/`
-
-
-## Despliegue en Render
-
-1. Ve a [https://render.com](https://render.com) y regístrate o inicia sesión
-2. Haz clic en **"New +"** → **"Web Service"**
-3. Conecta tu cuenta de GitHub y selecciona el repositorio
-4. Configura el servicio:
-
-| Configuración | Valor |
-|---------------|-------|
-| **Name** | `salimosHoy` |
-| **Runtime** | Python |
-| **Branch** | `master` |
-| **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true` |
-
-5. Haz clic en **"Create Web Service"**
-
-Una vez desplegada, la aplicación estará disponible en una URL proporcionada por Render, algo como:
-```
-https://salimoshoy.onrender.com
-```
-
-
-## Estructura del proyecto
-
-```
-project/
-├── README.md                # Este archivo
-├── requirements.txt         # Dependencias del proyecto
-├── app.py                   # Aplicación web (Streamlit)
-├── test_outbyml_api.py      # Script CLI original (referencia)
-├── .gitignore               # Archivos a excluir del repositorio
-└── env/                     # Entorno virtual (no incluir en control de versiones)
-```
-
-## APIs utilizadas
-
-- [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api) — Búsqueda de ciudades por nombre.
-- [Open-Meteo Weather Forecast API](https://open-meteo.com/en/docs) — Pronóstico meteorológico por hora.
+---
 
 ## Actividades disponibles
 
-| Actividad   | Franja horaria | Temp. ideal | Humedad ideal | Viento ideal |
-|-------------|----------------|-------------|---------------|--------------|
-| Pasear      | 07:00 - 22:00  | 22°C        | 50%           | 5 km/h       |
-| Turismo     | 08:00 - 20:00  | 21°C        | 50%           | 6 km/h       |
-| Deporte     | 06:00 - 21:00  | 18°C        | 45%           | 5 km/h       |
-| Bici        | 07:00 - 21:00  | 20°C        | 50%           | 4 km/h       |
-| Lavar ropa  | 09:00 - 18:00  | 24°C        | 35%           | 10 km/h      |
+- Pasear o hacer senderismo
+- Jardineria y agricultura
+- Deportes al aire libre
+- Picnic o actividades en parque
+- Ir al cine
+- Ir a la playa
 
-## Notas
+---
 
-- No se requiere ninguna API key; las APIs de Open-Meteo son gratuitas y abiertas.
-- La aplicación web utiliza Streamlit y se puede desplegar gratuitamente en Streamlit Cloud.
-- Los gráficos y el mapa son interactivos directamente en el navegador.
+## APIs utilizadas
+
+Open-Meteo Forecast API:
+
+```text
+https://api.open-meteo.com/v1/forecast
+```
+
+No se requiere API key.
+
+La demo usa un catalogo interno de 200 ciudades, por lo que no necesita geocoding para las ciudades del selector.
+
+---
+
+## Instalacion
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+Si PowerShell bloquea la activacion:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+macOS / Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+---
+
+## Ejecutar la app
+
+Desde la raiz del proyecto:
+
+```bash
+python -m streamlit run app.py
+```
+
+La app se abre en:
+
+```text
+http://localhost:8501
+```
+
+---
+
+## Estructura minima de la demo
+
+```text
+SalimosHoy_demo/
+├── app.py
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── assets/
+├── models/
+│   └── light/
+│       └── salimoshoy_rf_100_depth16_compressed.pkl
+└── src/
+    ├── config.py
+    ├── dataset_builder.py
+    ├── features.py
+    ├── geocoding.py
+    ├── mapping.py
+    ├── recommendations.py
+    ├── visualization.py
+    └── weather_api.py
+```
+
+Los scripts de entrenamiento, notebooks, datasets completos, reportes tecnicos y modelos pesados no son obligatorios para ejecutar esta demo.
+
+---
+
+## Despliegue
+
+### Streamlit Cloud
+
+1. Subir la version demo a GitHub.
+2. Crear una app en Streamlit Cloud.
+3. Usar `app.py` como archivo principal.
+4. Verificar que `requirements.txt` este incluido.
+5. Verificar que el modelo ligero oficial este en `models/light/`.
+
+### Render
+
+| Configuracion | Valor |
+|---|---|
+| Runtime | Python |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true` |
+
+---
+
+## Limitaciones
+
+- SalimosHoy? no reemplaza una app meteorologica profesional.
+- El clima actualizado depende de Open-Meteo.
+- El modelo clasifica condiciones climaticas para actividades; no predice el clima.
+- Si el modelo no esta disponible, la app usa reglas de respaldo para no romper la experiencia.
+- La calidad de la recomendacion depende de los datos disponibles para la ciudad y hora seleccionadas.
+
+---
+
+## Nota final
+
+SalimosHoy? convierte datos climaticos reales en una decision practica:
+
+```text
+Conviene salir ahora?
+Cual es la mejor hora?
+Que tan favorable es esta actividad segun el clima?
+```
