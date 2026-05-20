@@ -113,21 +113,6 @@ env\Scripts\deactivate
    - Gráficos interactivos de temperatura, lluvia, viento y score por hora.
    - Un mapa interactivo con la ubicación de la ciudad.
 
-## Despliegue en Streamlit Cloud
-
-Para desplegar la aplicación de forma gratuita en [Streamlit Cloud](https://streamlit.io/cloud):
-
-1. Sube el proyecto a un repositorio de GitHub (asegúrate de **no** incluir la carpeta `env/`).
-2. Ve a [share.streamlit.io](https://share.streamlit.io) e inicia sesión con tu cuenta de GitHub.
-3. Haz clic en **"New app"** y selecciona:
-   - **Repositorio:** tu repositorio de GitHub.
-   - **Rama:** `master` (o la rama principal).
-   - **Archivo principal:** `app.py`
-4. Haz clic en **Deploy** y espera a que la aplicación se construya.
-
-Esta aplication esta publicada en: `https://outbyml.streamlit.app/`
-
-
 ## Despliegue en Render
 
 1. Ve a [https://render.com](https://render.com) y regístrate o inicia sesión
