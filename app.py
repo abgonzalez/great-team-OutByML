@@ -38,19 +38,6 @@ ACTIVITIES = [
     "Ir a la playa",
 ]
 
-CITIES = [
-    'Madrid', 'Dubai', 'Reykjavik', 'Bilbao', 'Caracas',
-    'Buenos Aires', 'Barcelona', 'Riyadh', 'Oslo', 'Dublin',
-    'Panama City', 'Santiago', 'Paris', 'Doha', 'Helsinki', 'Glasgow',
-    'Havana', 'Lima', 'London', 'Cairo', 'Stockholm', 'Vancouver',
-    'Santo Domingo', 'Sao Paulo', 'Rome', 'Marrakech', 'Moscow',
-    'Bogota', 'San Juan', 'Cape Town', 'Lisbon', 'Phoenix', 'Montreal',
-    'Quito', 'Manaus', 'Johannesburg', 'Berlin', 'Las Vegas',
-    'Toronto', 'Singapore', 'Lagos', 'Sydney', 'Amsterdam', 'Seville',
-    'Ulaanbaatar', 'Kuala Lumpur', 'Nairobi', 'Melbourne', 'Vienna',
-    'Baghdad', 'Anchorage', 'Bangkok', 'Jakarta', 'Auckland', 'Prague',
-    'Kuwait City', 'Nuuk', 'Mumbai', 'Manila', 'Perth'
-]
 BASE_DIR = Path(__file__).resolve().parent
 ML_MODEL_PATH = BASE_DIR / "models" / "salimoshoy_rf_100_depth16_compressed.pkl"
 HERO_IMAGE_PATH = BASE_DIR / "assets" / "hero_banner.jpg"
@@ -1547,26 +1534,10 @@ def render_search_area():
         "Selecciona ciudad, actividad y modo de decision para generar una recomendacion.",
     )
     with st.container(border=True, key="control_card"):
-        # Dropdown de ciudades
-        selected_city_name = st.selectbox(
+        city_name_input = st.text_input(
             "Ciudad",
-            options=sorted(CITIES),
-            index=None,
-            placeholder="Selecciona una ciudad",
+            placeholder="Escribe cualquier ciudad",
         )
-        
-        # Si se selecciona una ciudad, buscarla y guardarla en session_state
-        if selected_city_name:
-            # Solo buscar si cambio la ciudad
-            if st.session_state.get("last_selected_city") != selected_city_name:
-                with st.spinner(f"Buscando {selected_city_name}..."):
-                    results = search_city(selected_city_name)
-                st.session_state.city_results = results
-                st.session_state.selected_city = results[0] if results else None
-                st.session_state.last_selected_city = selected_city_name
-                st.session_state.analysis = None
-                if not results:
-                    st.warning(f"No se encontraron datos para {selected_city_name}.")
 
         activity_col, mode_col = st.columns([1, 1])
         with activity_col:
@@ -1593,8 +1564,21 @@ def render_search_area():
             )
 
         if st.button("Analizar clima", type="primary", use_container_width=True):
+            city_name = city_name_input.strip()
+            if not city_name:
+                st.warning("Introduce una ciudad para continuar.")
+                return
+
+            if st.session_state.last_search != city_name or st.session_state.selected_city is None:
+                with st.spinner(f"Buscando {city_name}..."):
+                    results = search_city(city_name)
+                st.session_state.city_results = results
+                st.session_state.selected_city = results[0] if results else None
+                st.session_state.last_search = city_name
+                st.session_state.analysis = None
+
             if not st.session_state.city_results or st.session_state.selected_city is None:
-                st.warning("Primero busca y selecciona una ciudad.")
+                st.error(f"La ciudad '{city_name}' no existe o no se pudo encontrar.")
                 return
 
             with st.spinner("Analizando clima y horarios..."):
