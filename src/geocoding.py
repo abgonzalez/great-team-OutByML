@@ -10,6 +10,7 @@ def search_city(city_name, count=DEFAULT_CITY_COUNT):
     if not city_name:
         return []
 
+    # Consulta Open-Meteo Geocoding para convertir texto libre en ubicaciones.
     params = {
         "name": city_name,
         "count": count,
@@ -23,6 +24,7 @@ def search_city(city_name, count=DEFAULT_CITY_COUNT):
         data = response.json()
         return data.get("results", [])
     except requests.RequestException:
+        # Los errores de red no deben romper la app: se devuelve lista vacia.
         print("Error al buscar la ciudad. Revisa tu conexion o intenta mas tarde.")
         return []
     except ValueError:

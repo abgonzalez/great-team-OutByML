@@ -1,7 +1,9 @@
-"""Funciones para crear features y puntuaciones climaticas de OutByML."""
+"""Funciones para crear features y puntuaciones climaticas de SalimosHoy?."""
 
 import math
 
+# Parametros climaticos por actividad: horarios validos, valores ideales
+# y pesos que determinan cuanto penaliza cada variable.
 ACTIVITY_SETTINGS = {
     "Pasear o hacer senderismo": {
         "start_hour": 7,
@@ -24,7 +26,7 @@ ACTIVITY_SETTINGS = {
         "ideal_wind": 8,
         "ideal_uv": 4,
         "rain_weight": 1.3,
-        "wind_weight": 0.8,
+        "wind_weight": 1.0,
         "humidity_weight": 1.2,
         "uv_weight": 1.3,
         "temperature_weight": 1.2,
@@ -61,7 +63,7 @@ ACTIVITY_SETTINGS = {
         "ideal_temperature": 22,
         "ideal_humidity": 50,
         "ideal_wind": 10,
-        "ideal_uv": 6,
+        "ideal_uv": 1,
         "rain_weight": 0.3,
         "wind_weight": 0.3,
         "humidity_weight": 0.3,
@@ -105,6 +107,7 @@ def calculate_activity_score(row, settings):
     """Calcula una puntuacion de 0 a 100 segun clima y actividad."""
     score = 100
 
+    # La puntuacion parte de 100 y resta penalizaciones por alejarse del ideal.
     temperature = safe_value(row["temperature_2m"], 20)
     rain_probability = safe_value(row["precipitation_probability"], 0)
     wind_speed = safe_value(row["wind_speed_10m"], 0)
@@ -149,6 +152,7 @@ def calculate_activity_score(row, settings):
 
 def calculate_comfort_distance(row, settings):
     """Calcula distancia respecto a condiciones ideales. Menor es mejor."""
+    # Se usa como criterio secundario para desempatar horas con score parecido.
     temperature = safe_value(row["temperature_2m"], 20)
     rain_probability = safe_value(row["precipitation_probability"], 0)
     wind_speed = safe_value(row["wind_speed_10m"], 0)
@@ -191,6 +195,7 @@ def calculate_comfort_distance(row, settings):
 
 def classify_score(score):
     """Clasifica la puntuacion en una etiqueta sencilla."""
+    # Esta etiqueta se usa como fallback si el modelo ML no esta disponible.
     if score >= 85:
         return "excelente"
     if score >= 65:
@@ -202,6 +207,7 @@ def classify_score(score):
 
 def apply_weather_safety_rules(row, activity, recommendation):
     """Limita la recomendacion final ante lluvia, viento o temperatura extrema."""
+    # Estas reglas convierten la salida inicial en una recomendacion final realista.
     rain_probability = safe_value(row.get("precipitation_probability"), 0)
     wind_speed = safe_value(row.get("wind_speed_10m"), 0)
     temperature = safe_value(row.get("temperature_2m"), 20)
@@ -220,9 +226,20 @@ def apply_weather_safety_rules(row, activity, recommendation):
     ]
 
     if activity == "Ir al cine":
-        # Indoor activity - weather barely matters
+        # Actividad interior: el clima penaliza menos, salvo condiciones extremas.
+        if rain_probability >= 95 and recommendation in ["excelente", "bueno"]:
+            return "regular"
+        if rain_probability >= 80 and recommendation == "excelente":
+            return "bueno"
+        if wind_speed >= 45 and recommendation == "excelente":
+            return "bueno"
+        if temperature <= -3 and recommendation == "excelente":
+            return "bueno"
+        if temperature >= 42 and recommendation == "excelente":
+            return "bueno"
         return recommendation
     elif activity in outdoor_activities:
+        # La lluvia alta domina sobre el modelo para actividades al aire libre.
         if rain_probability >= 70:
             return "malo"
         if rain_probability >= 40 and recommendation in ["excelente", "bueno"]:
@@ -231,12 +248,14 @@ def apply_weather_safety_rules(row, activity, recommendation):
             recommendation = "bueno"
 
     if activity in wind_sensitive_activities:
+        # Viento fuerte afecta especialmente deportes, playa y picnic.
         if wind_speed >= 40:
             return "malo"
         if wind_speed >= 25 and recommendation in ["excelente", "bueno"]:
             recommendation = "regular"
 
     if activity in outdoor_activities:
+        # Temperaturas extremas se consideran inseguras para planes exteriores.
         if temperature >= 38 or temperature <= 0:
             return "malo"
 

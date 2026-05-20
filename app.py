@@ -52,7 +52,7 @@ CITIES = [
     'Kuwait City', 'Nuuk', 'Mumbai', 'Manila', 'Perth'
 ]
 BASE_DIR = Path(__file__).resolve().parent
-ML_MODEL_PATH = BASE_DIR / "models" / "outbyml_random_forest_model.pkl"
+ML_MODEL_PATH = BASE_DIR / "models" / "salimoshoy_rf_100_depth16_compressed.pkl"
 HERO_IMAGE_PATH = BASE_DIR / "assets" / "hero_banner.jpg"
 HERO_BG_PATH = BASE_DIR / "assets" / "red_neuronal.jpg"
 PAGE_BG_PATH = BASE_DIR / "assets" / "weather_bg.jpg"
