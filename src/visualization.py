@@ -8,6 +8,7 @@ CHART_HEIGHT = 400
 
 def create_score_chart(df, theme_template="plotly_white"):
     """Crea un grafico de puntuacion por hora."""
+    # Plotly devuelve figuras listas para renderizarse con st.plotly_chart.
     fig = px.line(
         df,
         x="hour",
@@ -23,6 +24,7 @@ def create_score_chart(df, theme_template="plotly_white"):
 
 def create_temperature_chart(df, theme_template="plotly_white"):
     """Crea un grafico de temperatura por hora."""
+    # Ayuda a comparar visualmente el confort termico durante el dia.
     fig = px.line(
         df,
         x="hour",
@@ -38,6 +40,7 @@ def create_temperature_chart(df, theme_template="plotly_white"):
 
 def create_rain_chart(df, theme_template="plotly_white"):
     """Crea un grafico de probabilidad de lluvia por hora."""
+    # La lluvia se limita a 0-100 porque representa una probabilidad.
     fig = px.line(
         df,
         x="hour",
@@ -57,6 +60,7 @@ def create_rain_chart(df, theme_template="plotly_white"):
 
 def create_wind_chart(df, theme_template="plotly_white"):
     """Crea un grafico de viento por hora."""
+    # El viento complementa las reglas de seguridad para actividades sensibles.
     fig = px.line(
         df,
         x="hour",

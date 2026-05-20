@@ -3,6 +3,7 @@
 
 def sort_recommendations(df):
     """Ordena por mejor score y luego por menor distancia de confort."""
+    # El score decide la prioridad; comfort_distance desempata entre horas cercanas.
     return df.sort_values(
         ["activity_score", "comfort_distance"],
         ascending=[False, True],
@@ -13,6 +14,7 @@ def get_best_hour(df_valid_hours):
     """Devuelve la mejor fila segun activity_score y comfort_distance."""
     if df_valid_hours.empty:
         return None
+    # La primera fila del ordenamiento es la recomendacion principal.
     return sort_recommendations(df_valid_hours).iloc[0]
 
 
@@ -20,6 +22,7 @@ def get_top_hours(df_valid_hours, top_n=5):
     """Devuelve las mejores horas segun score y distancia de confort."""
     if df_valid_hours.empty:
         return df_valid_hours
+    # Top 5 mantiene el mismo criterio que la mejor hora.
     return sort_recommendations(df_valid_hours).head(top_n)
 
 
@@ -40,6 +43,7 @@ def generate_recommendation_text(best_row, activity, city_name):
         f"Las condiciones son {label} y el score es {score:.1f}/100."
     )
 
+    # Si falta alguna variable climatica, se conserva el texto base.
     if temperature is None or rain is None or wind is None:
         return base_text
 

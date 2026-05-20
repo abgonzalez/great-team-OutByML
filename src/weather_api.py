@@ -20,6 +20,7 @@ HOURLY_VARIABLES = [
 
 def get_weather(latitude, longitude, timezone):
     """Obtiene datos horarios de clima para una ubicacion."""
+    # Forecast API entrega el clima actualizado que luego clasifica el modelo.
     params = {
         "latitude": latitude,
         "longitude": longitude,
@@ -33,6 +34,7 @@ def get_weather(latitude, longitude, timezone):
         response.raise_for_status()
         return response.json()
     except requests.RequestException:
+        # Si falla la API, la app recibe None y puede mostrar un error controlado.
         print("Error al consultar el clima. Revisa tu conexion o intenta mas tarde.")
         return None
     except ValueError:
@@ -49,6 +51,7 @@ def build_weather_dataframe(weather_data):
         if "hourly" not in weather_data:
             return pd.DataFrame()
 
+        # Mantiene una fila por hora con las variables usadas por la app.
         df = pd.DataFrame(weather_data["hourly"])
         df["time"] = pd.to_datetime(df["time"])
         df["hour"] = df["time"].dt.hour

@@ -6,6 +6,7 @@ import pydeck as pdk
 
 def create_city_deck(city_name, country, latitude, longitude):
     """Crea un objeto pydeck Deck centrado en una ciudad."""
+    # El mapa usa las coordenadas de la ciudad seleccionada en la app.
     data = pd.DataFrame(
         [
             {
@@ -29,6 +30,7 @@ def create_city_deck(city_name, country, latitude, longitude):
         pickable=True,
     )
 
+    # Capa suave alrededor del punto para destacar el area analizada.
     pulse_layer = pdk.Layer(
         "ScatterplotLayer",
         data=data,
