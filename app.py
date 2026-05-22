@@ -1,12 +1,14 @@
 """Aplicacion web de SalimosHoy? con Streamlit."""
 
 import base64
+import unicodedata
 from pathlib import Path
 
 import joblib
 import pandas as pd
 import streamlit as st
 
+from src.dataset_builder import get_smart_cities_200
 from src.features import (
     apply_weather_safety_rules,
     calculate_activity_score,
@@ -15,7 +17,6 @@ from src.features import (
     get_activity_settings,
     get_valid_hours,
 )
-from src.geocoding import search_city
 from src.recommendations import (
     generate_recommendation_text,
     get_best_hour,
@@ -39,7 +40,8 @@ ACTIVITIES = [
 ]
 
 BASE_DIR = Path(__file__).resolve().parent
-ML_MODEL_PATH = BASE_DIR / "models" / "salimoshoy_rf_100_depth16_compressed.pkl"
+# Modelo ligero oficial de la demo/GitHub; no se carga ningun modelo pesado.
+ML_MODEL_PATH = BASE_DIR / "models" / "light" / "salimoshoy_rf_100_depth16_compressed.pkl"
 HERO_IMAGE_PATH = BASE_DIR / "assets" / "hero_banner.jpg"
 HERO_BG_PATH = BASE_DIR / "assets" / "red_neuronal.jpg"
 PAGE_BG_PATH = BASE_DIR / "assets" / "weather_bg.jpg"
@@ -51,6 +53,7 @@ ACTIVITY_IMAGES = {
     "Ir al cine": BASE_DIR / "assets" / "activity_cine.jpg",
     "Ir a la playa": BASE_DIR / "assets" / "activity_playa.jpg",
 }
+# El pipeline del modelo espera estas 13 columnas y este orden exacto.
 ML_FEATURE_COLUMNS = [
     "temperature_2m",
     "apparent_temperature",
@@ -123,40 +126,6 @@ def inject_styles(theme):
             f'url("data:image/jpeg;base64,{hero_bg_base64}")'
             if hero_bg_base64
             else "linear-gradient(180deg, #111E30, #172A42)"
-        )
-    elif theme == "Cálido":
-        colors = {
-            "bg": "#FFFDF8",
-            "bg_layer": "linear-gradient(180deg, #FFFEF9 0%, #FFF8EC 100%)",
-            "panel": "#FFFFFF",
-            "panel_soft": "#FFF9EF",
-            "border": "rgba(234, 206, 160, 0.45)",
-            "text": "#111111",
-            "muted": "#333333",
-            "accent": "#F59E0B",
-            "accent_2": "#38BDF8",
-            "hero_subtitle": "#3D5A7A",
-            "input_bg": "#FFFFFF",
-            "button_text": "#FFFFFF",
-            "recommendation_bg": "rgba(245, 158, 11, 0.10)",
-            "recommendation_text": "#1A2B3D",
-            "hero_title_shadow": (
-                "0 2px 0 rgba(255, 255, 255, 0.90), "
-                "0 6px 18px rgba(245, 158, 11, 0.20), "
-                "0 14px 35px rgba(15, 23, 42, 0.08)"
-            ),
-            "hero_visual": (
-                "radial-gradient(circle at 30% 24%, rgba(245, 158, 11, 0.18), transparent 26%), "
-                "radial-gradient(circle at 68% 72%, rgba(56, 189, 248, 0.14), transparent 22%), "
-                "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,248,230,0.85))"
-            ),
-            "shadow": "0 12px 32px rgba(194, 155, 80, 0.10)",
-        }
-        hero_card_background = (
-            f'linear-gradient(180deg, rgba(255,253,248,0.92), rgba(255,248,230,0.90)), '
-            f'url("data:image/jpeg;base64,{hero_bg_base64}")'
-            if hero_bg_base64
-            else "linear-gradient(180deg, var(--panel), var(--panel-soft))"
         )
     else:
         colors = {
@@ -353,14 +322,6 @@ def inject_styles(theme):
 
             .hero-cta-btn:hover {
                 transform: translateY(-3px) scale(1.02);
-                box-shadow: 0 14px 36px rgba(45, 181, 160, 0.4);
-                filter: brightness(1.08);
-                color: #FFFFFF;
-                text-decoration: none;
-            }
-
-            .hero-cta-btn:hover {
-                transform: translateY(-3px) scale(1.02);
                 box-shadow: 0 14px 36px rgba(47, 128, 237, 0.35);
                 filter: brightness(1.08);
                 color: var(--button-text);
@@ -383,14 +344,6 @@ def inject_styles(theme):
                 font-weight: 800;
                 margin: 1.5rem 0 0.3rem 0;
                 color: var(--text);
-                text-align: center;
-            }
-
-            .section-subtitle {
-                margin: 0 0 0.85rem 0;
-                color: var(--muted);
-                font-size: 1.15rem;
-                line-height: 1.55;
                 text-align: center;
             }
 
@@ -797,12 +750,6 @@ def inject_styles(theme):
 
             .st-key-control_card .stButton > button:hover {
                 transform: translateY(-3px) scale(1.01);
-                box-shadow: 0 14px 32px rgba(45, 181, 160, 0.4);
-                filter: brightness(1.08);
-            }
-
-            .st-key-control_card .stButton > button:hover {
-                transform: translateY(-3px) scale(1.01);
                 box-shadow: 0 14px 32px rgba(47, 128, 237, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.25);
                 filter: brightness(1.08);
             }
@@ -924,10 +871,8 @@ def inject_styles(theme):
 
 def init_session_state():
     defaults = {
-        "city_results": [],
         "selected_city": None,
         "analysis": None,
-        "last_search": "",
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -936,11 +881,13 @@ def init_session_state():
 @st.cache_resource
 def load_ml_model():
     """Carga el modelo ML entrenado una sola vez por sesion."""
+    # Streamlit cachea el .pkl para evitar recargarlo en cada interaccion.
     if not ML_MODEL_PATH.exists():
         return None
     try:
         model = joblib.load(ML_MODEL_PATH)
         estimator = model.steps[-1][1] if hasattr(model, "steps") else model
+        # En la app interactiva se limita el estimador para evitar exceso de hilos.
         if hasattr(estimator, "n_jobs"):
             estimator.n_jobs = 1
         return model
@@ -949,34 +896,98 @@ def load_ml_model():
 
 
 def get_season_block(month):
-    """Mapea el mes actual al bloque estacional usado por el modelo."""
+    """Mapea cada mes real al bloque estrategico usado durante el entrenamiento."""
+    # El modelo se entreno con bloques alternos; cada mes se aproxima al bloque
+    # mensual estrategico mas cercano para evitar categorias no vistas.
     if month in [12, 1, 2]:
         return "enero"
-    if month in [3, 4, 5]:
-        return "abril"
-    if month in [6, 7, 8]:
+    if month in [3, 4]:
+        return "marzo"
+    if month in [5, 6]:
+        return "mayo"
+    if month in [7, 8]:
         return "julio"
-    return "octubre"
+    if month in [9, 10]:
+        return "septiembre"
+    return "noviembre"
 
 
-def get_city_continent(selected_city):
-    """Obtiene el continente si la fuente de ciudad lo trae."""
-    if not selected_city:
-        return "desconocido"
+def normalize_lookup_text(value):
+    if value is None:
+        return ""
+    text = unicodedata.normalize("NFKD", str(value))
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return text.casefold().strip()
+
+
+def format_city_option(city_info):
     return (
-        selected_city.get("continent")
-        or selected_city.get("continent_name")
-        or "desconocido"
+        f"{city_info.get('city')}, {city_info.get('country')} | "
+        f"{city_info.get('climate_group')}"
     )
+
+
+@st.cache_data
+def get_city_catalog_options():
+    """Devuelve las opciones visibles del selector desde el catalogo interno."""
+    # El selector usa las 200 ciudades del entrenamiento para evitar ambiguedad.
+    options = {}
+    for city_info in get_smart_cities_200():
+        label = format_city_option(city_info)
+        options[label] = city_info
+    return dict(sorted(options.items()))
+
+
+@st.cache_data
+def get_city_metadata_index():
+    """Indexa ciudades internas para recuperar continent y climate_group."""
+    index = {}
+    for city_info in get_smart_cities_200():
+        city_key = normalize_lookup_text(city_info.get("city"))
+        country_key = normalize_lookup_text(city_info.get("country"))
+        if city_key:
+            index[(city_key, country_key)] = city_info
+            index.setdefault((city_key, ""), city_info)
+    return index
+
+
+def get_city_metadata(selected_city):
+    """Obtiene metadatos climaticos desde la lista interna cuando hay match."""
+    if not selected_city:
+        return {"continent": "desconocido", "climate_group": "desconocido"}
+
+    city_name = selected_city.get("city") or selected_city.get("name")
+    country_name = selected_city.get("country")
+    metadata = get_city_metadata_index().get(
+        (normalize_lookup_text(city_name), normalize_lookup_text(country_name))
+    ) or get_city_metadata_index().get((normalize_lookup_text(city_name), ""))
+
+    # Fallback seguro: el OneHotEncoder del pipeline usa handle_unknown="ignore".
+    return {
+        "continent": (
+            (metadata or {}).get("continent")
+            or selected_city.get("continent")
+            or selected_city.get("continent_name")
+            or "desconocido"
+        ),
+        "climate_group": (
+            (metadata or {}).get("climate_group")
+            or selected_city.get("climate_group")
+            or "desconocido"
+        ),
+    }
 
 
 def prepare_ml_features(df_valid_hours, activity, selected_city):
     """Prepara las columnas exactas que espera el pipeline ML."""
     features = df_valid_hours.copy()
     current_month = pd.Timestamp.now().month
+    city_metadata = get_city_metadata(selected_city)
+
+    # Estas columnas deben coincidir exactamente con las usadas al entrenar.
     features["activity"] = activity
-    features["continent"] = get_city_continent(selected_city)
-    features["climate_group"] = "desconocido"
+    features["continent"] = city_metadata["continent"]
+    features["climate_group"] = city_metadata["climate_group"]
     features["season_block"] = get_season_block(current_month)
     return features[ML_FEATURE_COLUMNS].copy()
 
@@ -1008,7 +1019,7 @@ def get_theme_mode():
 
 def city_label(city):
     parts = [
-        city.get("name"),
+        city.get("city") or city.get("name"),
         city.get("admin1"),
         city.get("country"),
     ]
@@ -1075,6 +1086,7 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
     longitude = city.get("longitude")
     timezone = city.get("timezone", "auto")
 
+    # Open-Meteo aporta el clima actualizado; el modelo solo clasifica condiciones.
     weather_data = get_weather(latitude, longitude, timezone)
     df_weather = build_weather_dataframe(weather_data)
 
@@ -1083,6 +1095,7 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
 
     settings = get_activity_settings(activity)
     df_weather = df_weather.copy()
+    # Estas variables de reglas sirven como respaldo y para ordenar las horas.
     df_weather["activity_score"] = df_weather.apply(
         lambda row: calculate_activity_score(row, settings),
         axis=1,
@@ -1105,6 +1118,7 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
     ml_model_available = ml_model is not None
     ml_model_missing = not ML_MODEL_PATH.exists()
     ml_error = None
+    # Si el modelo falta o falla, la app conserva la experiencia con reglas.
     if ml_model_available:
         try:
             X_ml = prepare_ml_features(df_valid_hours, activity, city)
@@ -1116,6 +1130,8 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
     source_recommendation_column = (
         "recommendation_ml" if ml_model_available else "recommendation"
     )
+    # recommendation_final combina la salida ML con reglas finales de seguridad
+    # para evitar lluvia, viento fuerte o temperaturas extremas poco realistas.
     df_valid_hours["recommendation_final"] = df_valid_hours.apply(
         lambda row: apply_weather_safety_rules(
             row,
@@ -1124,17 +1140,6 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
         ),
         axis=1,
     )
-    df_valid_hours["recommendation_final"] = df_valid_hours.apply(
-        lambda row: apply_weather_safety_rules(
-            row,
-            activity,
-            row[source_recommendation_column],
-        ),
-        axis=1,
-    )
-
-    best_row = get_best_hour(df_valid_hours)
-    top_hours = get_top_hours(df_valid_hours, top_n=5)
 
     best_row = get_best_hour(df_valid_hours)
     top_hours = get_top_hours(df_valid_hours, top_n=5)
@@ -1168,11 +1173,6 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
         "ml_model_missing": ml_model_missing,
         "ml_error": ml_error,
     }, None
-
-def build_specific_hour_text(selected_hour_row, best_row):
-    """Genera un texto humano para la hora evaluada."""
-    if selected_hour_row is None:
-        return "No hay datos disponibles para la hora seleccionada."
 
 def build_specific_hour_text(selected_hour_row, best_row):
     """Genera un texto humano para la hora evaluada."""
@@ -1263,8 +1263,8 @@ def render_how_it_works():
             </div>
             <div class="info-card">
                 <div class="analysis-badge">🌦️</div>
-                <h3>Predice el tipo de clima</h3>
-                <p>Usa ML para clasificar las condiciones meteorologicas en categorias de clima.</p>
+                <h3>Clasifica condiciones climaticas</h3>
+                <p>El clima viene de Open-Meteo; el modelo evalua si la actividad tiene condiciones malas, regulares, buenas o excelentes.</p>
             </div>
             <div class="info-card">
                 <div class="analysis-badge">🏃</div>
@@ -1293,12 +1293,12 @@ def render_ml_section():
             <div class="info-card" style="text-align:center;">
                 <div style="font-size:2.2rem; margin-bottom:0.5rem;">🌲</div>
                 <h3>Random Forest</h3>
-                <p>Modelo de clasificacion basado en multiples arboles de decision que votan en conjunto para una prediccion robusta.</p>
+                <p>Modelo de clasificacion basado en multiples arboles de decision que votan en conjunto para una clasificacion robusta.</p>
             </div>
             <div class="info-card" style="text-align:center;">
                 <div style="font-size:2.2rem; margin-bottom:0.5rem;">🎯</div>
-                <h3>96.6% Accuracy</h3>
-                <p>El modelo acierta en la gran mayoria de casos, especialmente identificando condiciones malas con 99% de precision.</p>
+                <h3>Accuracy test 0.994267</h3>
+                <p>Modelo ligero optimizado para GitHub/demo: 28.49 MB, recall malo 0.992699 y recall regular 0.992456.</p>
             </div>
             <div class="info-card" style="text-align:center;">
                 <div style="font-size:2.2rem; margin-bottom:0.5rem;">📊</div>
@@ -1338,12 +1338,12 @@ def render_ml_details_page():
             <div class="info-card" style="text-align:center;">
                 <div style="font-size:2.2rem; margin-bottom:0.5rem;">🌲</div>
                 <h3>Random Forest</h3>
-                <p>Modelo de clasificacion basado en multiples arboles de decision que votan en conjunto para una prediccion robusta.</p>
+                <p>Modelo de clasificacion basado en multiples arboles de decision que votan en conjunto para una clasificacion robusta.</p>
             </div>
             <div class="info-card" style="text-align:center;">
                 <div style="font-size:2.2rem; margin-bottom:0.5rem;">🎯</div>
-                <h3>96.6% Accuracy</h3>
-                <p>El modelo acierta en la gran mayoria de casos, especialmente identificando condiciones malas con 99% de precision.</p>
+                <h3>Accuracy test 0.994267</h3>
+                <p>Modelo ligero optimizado para GitHub/demo: 28.49 MB, recall malo 0.992699 y recall regular 0.992456.</p>
             </div>
             <div class="info-card" style="text-align:center;">
                 <div style="font-size:2.2rem; margin-bottom:0.5rem;">📊</div>
@@ -1398,45 +1398,40 @@ def render_ml_details_page():
 
     metric_cols = st.columns(4)
     with metric_cols[0]:
-        st.metric("Accuracy (Train)", "97.39%")
+        st.metric("Accuracy test", "0.994267")
     with metric_cols[1]:
-        st.metric("Accuracy (Test)", "96.59%")
+        st.metric("Recall malo", "0.992699")
     with metric_cols[2]:
-        st.metric("Mejor clase", "Malo: 99%")
+        st.metric("Recall regular", "0.992456")
     with metric_cols[3]:
-        st.metric("Overfitting", "< 1%", delta="-0.8%", delta_color="normal")
+        st.metric("Peso modelo", "28.49 MB")
 
     st.markdown(
         """
-        **Rendimiento por clase (test):**
+        **Rendimiento critico del modelo oficial (test):**
 
-        | Clase | Precision | Recall | F1-Score | Soporte |
-        |---|---|---|---|---|
-        | Excelente | 0.93 | 0.93 | 0.93 | — |
-        | Bueno | 0.93 | 0.93 | 0.93 | — |
-        | Regular | 0.97 | 0.97 | 0.97 | — |
-        | Malo | 0.99 | 0.99 | 0.99 | — |
+        | Metrica | Valor |
+        |---|---:|
+        | Accuracy test | 0.994267 |
+        | Recall malo | 0.992699 |
+        | Recall regular | 0.992456 |
+        | Peso del modelo | 28.49 MB |
         """
     )
 
     st.markdown("---")
 
-    st.subheader("Comparativa de modelos")
+    st.subheader("Modelo oficial GitHub/demo")
     st.markdown(
         """
-        Se evaluaron 3 modelos diferentes para encontrar el mejor clasificador:
+        La version GitHub/demo usa un unico modelo oficial ligero:
 
-        | Modelo | Accuracy Train | Accuracy Test | Resultado |
-        |---|---|---|---|
-        | ✅ **Random Forest** | 97.39% | 96.59% | **Ganador** |
-        | Decision Tree | 89.50% | 89.43% | Aceptable |
-        | Logistic Regression | 51.55% | 50.17% | Insuficiente |
+        | Modelo | Peso | Accuracy test | Recall malo | Recall regular |
+        |---|---|---|---|---|
+        | ✅ **RF 100 depth 16** | 28.49 MB | 0.994267 | 0.992699 | 0.992456 |
 
-        **Random Forest** fue el claro ganador, con la mejor accuracy y el menor
-        sobreajuste (diferencia train-test de solo 0.8%).
-
-        **Logistic Regression** no fue capaz de separar las clases correctamente,
-        lo que confirma que el problema no es linealmente separable.
+        El modelo no predice el clima: clasifica las condiciones climaticas que
+        llegan desde Open-Meteo para la actividad elegida.
         """
     )
 
@@ -1456,7 +1451,7 @@ def render_ml_details_page():
 
         Estos filtros garantizan que el modelo aprende a penalizar condiciones
         adversas, como lluvia fuerte para actividades al aire libre o temperaturas
-        extremas para deporte.
+        extremas para deportes al aire libre.
         """
     )
 
@@ -1534,10 +1529,21 @@ def render_search_area():
         "Selecciona ciudad, actividad y modo de decision para generar una recomendacion.",
     )
     with st.container(border=True, key="control_card"):
-        city_name_input = st.text_input(
+        city_options = get_city_catalog_options()
+        selected_city_label = st.selectbox(
             "Ciudad",
-            placeholder="Escribe cualquier ciudad",
+            options=list(city_options.keys()),
+            index=None,
+            placeholder="Selecciona una ciudad",
         )
+
+        if selected_city_label:
+            if st.session_state.get("last_selected_city") != selected_city_label:
+                # Las ciudades internas ya incluyen coordenadas, timezone y metadata
+                # del entrenamiento, asi se evita geocoding ambiguo.
+                st.session_state.selected_city = city_options[selected_city_label].copy()
+                st.session_state.last_selected_city = selected_city_label
+                st.session_state.analysis = None
 
         activity_col, mode_col = st.columns([1, 1])
         with activity_col:
@@ -1564,21 +1570,8 @@ def render_search_area():
             )
 
         if st.button("Analizar clima", type="primary", use_container_width=True):
-            city_name = city_name_input.strip()
-            if not city_name:
-                st.warning("Introduce una ciudad para continuar.")
-                return
-
-            if st.session_state.last_search != city_name or st.session_state.selected_city is None:
-                with st.spinner(f"Buscando {city_name}..."):
-                    results = search_city(city_name)
-                st.session_state.city_results = results
-                st.session_state.selected_city = results[0] if results else None
-                st.session_state.last_search = city_name
-                st.session_state.analysis = None
-
-            if not st.session_state.city_results or st.session_state.selected_city is None:
-                st.error(f"La ciudad '{city_name}' no existe o no se pudo encontrar.")
+            if st.session_state.selected_city is None:
+                st.warning("Primero busca y selecciona una ciudad.")
                 return
 
             with st.spinner("Analizando clima y horarios..."):
@@ -1604,6 +1597,7 @@ def render_results(theme):
     if not analysis:
         return
 
+    # Los resultados ya vienen calculados; esta seccion solo los presenta.
     best_row = analysis["best_row"]
     selected_hour_row = analysis.get("selected_hour_row")
     decision_mode = analysis.get("decision_mode", "Buscar mejor hora")
