@@ -218,6 +218,27 @@ Los scripts de entrenamiento, notebooks, datasets completos, reportes tecnicos y
 ---
 
 ## Nota final
+---
+
+## Limitaciones
+
+- SalimosHoy? no reemplaza una app meteorologica profesional.
+- El clima actualizado depende de Open-Meteo.
+- El modelo clasifica condiciones climaticas para actividades; no predice el clima.
+- Si el modelo no esta disponible, la app usa reglas de respaldo para no romper la experiencia.
+- La calidad de la recomendacion depende de los datos disponibles para la ciudad y hora seleccionadas.
+
+---
+
+## Nota final
+
+SalimosHoy? convierte datos climaticos reales en una decision practica:
+
+```text
+Conviene salir ahora?
+Cual es la mejor hora?
+Que tan favorable es esta actividad segun el clima?
+```
 
 SalimosHoy? convierte datos climaticos reales en una decision practica:
 
