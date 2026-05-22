@@ -116,18 +116,7 @@ No se requiere API key.
 La demo usa un catalogo interno de 200 ciudades, por lo que no necesita geocoding para las ciudades del selector.
 
 ---
-## Tecnologias usadas
 
-- Python
-- Requests
-- Pandas
-- Streamlit
-- Plotly
-- Pydeck
-- Open-Meteo Geocoding API
-- Open-Meteo Forecast API
-
----
 ## Instalacion
 
 Windows PowerShell:
@@ -200,28 +189,35 @@ Los scripts de entrenamiento, notebooks, datasets completos, reportes tecnicos y
 
 ## Despliegue
 
-## Despliegue en Render
+### Streamlit Cloud
 
-1. Ve a [https://render.com](https://render.com) y regístrate o inicia sesión
-2. Haz clic en **"New +"** → **"Web Service"**
-3. Conecta tu cuenta de GitHub y selecciona el repositorio
-4. Configura el servicio:
+1. Subir la version demo a GitHub.
+2. Crear una app en Streamlit Cloud.
+3. Usar `app.py` como archivo principal.
+4. Verificar que `requirements.txt` este incluido.
+5. Verificar que el modelo ligero oficial este en `models/light/`.
 
-| Configuración | Valor |
-|---------------|-------|
-| **Name** | `salimosHoy` |
-| **Runtime** | Python |
-| **Branch** | `master` |
-| **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true` |
+### Render
 
-5. Haz clic en **"Create Web Service"**
+| Configuracion | Valor |
+|---|---|
+| Runtime | Python |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true` |
 
-Una vez desplegada, la aplicación estará disponible en una URL proporcionada por Render, algo como:
-```
-https://salimoshoy.onrender.com
-```
+---
 
+## Limitaciones
+
+- SalimosHoy? no reemplaza una app meteorologica profesional.
+- El clima actualizado depende de Open-Meteo.
+- El modelo clasifica condiciones climaticas para actividades; no predice el clima.
+- Si el modelo no esta disponible, la app usa reglas de respaldo para no romper la experiencia.
+- La calidad de la recomendacion depende de los datos disponibles para la ciudad y hora seleccionadas.
+
+---
+
+## Nota final
 ---
 
 ## Limitaciones
@@ -244,6 +240,10 @@ Cual es la mejor hora?
 Que tan favorable es esta actividad segun el clima?
 ```
 
-- No se requiere ninguna API key; las APIs de Open-Meteo son gratuitas y abiertas.
-- La aplicación web utiliza Streamlit y se puede desplegar gratuitamente en Streamlit Cloud.
-- Los gráficos y el mapa son interactivos directamente en el navegador.
+SalimosHoy? convierte datos climaticos reales en una decision practica:
+
+```text
+Conviene salir ahora?
+Cual es la mejor hora?
+Que tan favorable es esta actividad segun el clima?
+```
