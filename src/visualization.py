@@ -18,7 +18,15 @@ def create_score_chart(df, theme_template="plotly_white"):
         labels={"hour": "Hora", "activity_score": "Score"},
         template=theme_template,
     )
-    fig.update_layout(height=CHART_HEIGHT)
+    fig.update_layout(
+        height=CHART_HEIGHT,
+        autosize=True,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(l=50, r=30, t=50, b=50),
+        xaxis=dict(tickfont=dict(color="black"), title=dict(font=dict(color="black"))),
+        yaxis=dict(tickfont=dict(color="black"), title=dict(font=dict(color="black")))
+    )
     return fig
 
 
@@ -34,7 +42,15 @@ def create_temperature_chart(df, theme_template="plotly_white"):
         labels={"hour": "Hora", "temperature_2m": "Temperatura"},
         template=theme_template,
     )
-    fig.update_layout(height=CHART_HEIGHT)
+    fig.update_layout(
+        height=CHART_HEIGHT,
+        autosize=True,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(l=50, r=30, t=50, b=50),
+        xaxis=dict(tickfont=dict(color="black"), title=dict(font=dict(color="black"))),
+        yaxis=dict(tickfont=dict(color="black"), title=dict(font=dict(color="black")))
+    )
     return fig
 
 
@@ -54,7 +70,15 @@ def create_rain_chart(df, theme_template="plotly_white"):
         template=theme_template,
     )
     fig.update_yaxes(range=[0, 100])
-    fig.update_layout(height=CHART_HEIGHT)
+    fig.update_layout(
+        height=CHART_HEIGHT,
+        autosize=True,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(l=50, r=30, t=50, b=50),
+        xaxis=dict(tickfont=dict(color="black"), title=dict(font=dict(color="black"))),
+        yaxis=dict(tickfont=dict(color="black"), title=dict(font=dict(color="black")))
+    )
     return fig
 
 
@@ -70,5 +94,13 @@ def create_wind_chart(df, theme_template="plotly_white"):
         labels={"hour": "Hora", "wind_speed_10m": "Viento km/h"},
         template=theme_template,
     )
-    fig.update_layout(height=CHART_HEIGHT)
+    fig.update_layout(
+        height=CHART_HEIGHT,
+        autosize=True,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(l=50, r=30, t=50, b=50),
+        xaxis=dict(tickfont=dict(color="black"), title=dict(font=dict(color="black"))),
+        yaxis=dict(tickfont=dict(color="black"), title=dict(font=dict(color="black")))
+    )
     return fig

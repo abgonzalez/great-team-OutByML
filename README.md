@@ -164,15 +164,31 @@ http://localhost:8501
 
 ```text
 SalimosHoy_demo/
+├── .gitignore
 ├── app.py
+├── MANIFIESTO_DEMO.txt
 ├── README.md
 ├── requirements.txt
-├── .gitignore
 ├── assets/
+│   ├── activity_cine.jpg
+│   ├── activity_deportes.jpg
+│   ├── activity_jardineria.jpg
+│   ├── activity_picnic.jpg
+│   ├── activity_playa.jpg
+│   ├── activity_senderismo.jpg
+│   ├── hero_banner.jpg
+│   ├── red_neuronal.jpg
+│   └── weather_bg.jpg
 ├── models/
 │   └── light/
 │       └── salimoshoy_rf_100_depth16_compressed.pkl
+├── presentacion/
+│   ├── 01_salimoshoy_modelos.ipynb
+│   └── presentacion.ipynb
+├── scripts/
+│   └── train_light_model_for_github.py
 └── src/
+    ├── __init__.py
     ├── config.py
     ├── dataset_builder.py
     ├── features.py
@@ -187,24 +203,27 @@ Los scripts de entrenamiento, notebooks, datasets completos, reportes tecnicos y
 
 ---
 
-## Despliegue
+## Despliegue en Render
 
-### Streamlit Cloud
+1. Ve a [https://render.com](https://render.com) y regístrate o inicia sesión
+2. Haz clic en **"New +"** → **"Web Service"**
+3. Conecta tu cuenta de GitHub y selecciona el repositorio
+4. Configura el servicio:
 
-1. Subir la version demo a GitHub.
-2. Crear una app en Streamlit Cloud.
-3. Usar `app.py` como archivo principal.
-4. Verificar que `requirements.txt` este incluido.
-5. Verificar que el modelo ligero oficial este en `models/light/`.
+| Configuración | Valor |
+|---------------|-------|
+| **Name** | `salimosHoy` |
+| **Runtime** | Python |
+| **Branch** | `master` |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true` |
 
-### Render
+5. Haz clic en **"Create Web Service"**
 
-| Configuracion | Valor |
-|---|---|
-| Runtime | Python |
-| Build Command | `pip install -r requirements.txt` |
-| Start Command | `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true` |
-
+Una vez desplegada, la aplicación estará disponible en una URL proporcionada por Render, algo como:
+```
+https://salimoshoy.onrender.com
+```
 ---
 
 ## Limitaciones
