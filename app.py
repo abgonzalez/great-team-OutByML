@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from src.dataset_builder import get_smart_cities_200
+from src.geocoding import search_city
 from src.features import (
     apply_weather_safety_rules,
     calculate_activity_score,
@@ -610,6 +611,34 @@ def inject_styles(theme):
                 transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
             }
 
+            /* Enhanced city search input */
+            .st-key-control_card div[data-testid="stTextInput"] input {
+                border: 2px solid #D1D5DB;
+                border-radius: 16px;
+                padding: 0.9rem 1.2rem !important;
+                font-size: 1.2rem !important;
+                min-height: 3.5rem !important;
+                height: auto !important;
+                line-height: 1.5 !important;
+                background-color: white;
+                color: #1F2937;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .st-key-control_card div[data-testid="stTextInput"] input:focus {
+                border-color: #2DB5A0;
+                box-shadow: 0 0 0 4px rgba(45, 181, 160, 0.15), 0 4px 12px rgba(45, 181, 160, 0.2);
+                transform: translateY(-1px);
+                outline: none;
+            }
+
+            .st-key-control_card div[data-testid="stTextInput"] input::placeholder {
+                color: #9CA3AF;
+                font-style: italic;
+                font-size: 1.05rem;
+            }
+
             [data-testid="stWidgetLabel"] label,
             [data-testid="stWidgetLabel"] p {
                 color: var(--text) !important;
@@ -637,6 +666,25 @@ def inject_styles(theme):
             div[data-testid="stDataFrame"] {
                 border-radius: 14px;
                 overflow: hidden;
+            }
+
+            /* White background for table */
+            div[data-testid="stDataFrame"] table,
+            div[data-testid="stDataFrame"] thead,
+            div[data-testid="stDataFrame"] tbody,
+            div[data-testid="stDataFrame"] tr,
+            div[data-testid="stDataFrame"] th,
+            div[data-testid="stDataFrame"] td {
+                background-color: white !important;
+                background: white !important;
+            }
+
+            div[data-testid="stDataFrame"] th {
+                color: black !important;
+            }
+
+            div[data-testid="stDataFrame"] td {
+                color: black !important;
             }
 
             .st-key-theme_picker {
@@ -724,8 +772,27 @@ def inject_styles(theme):
             /* Spacing and visual separation between Ciudad and Actividad/Modo */
             .st-key-control_card div[data-testid="stVerticalBlock"] > div:first-child {
                 padding-bottom: 1.2rem;
-                margin-bottom: 0.5rem;
-                border-bottom: 1px dashed var(--border);
+                margin-bottom: 1.2rem;
+                border-bottom: 2px solid var(--border);
+                background: linear-gradient(180deg, rgba(45, 181, 160, 0.03), transparent);
+                border-radius: 12px 12px 0 0;
+                padding-top: 0.5rem;
+            }
+
+            /* Style for the city search section header */
+            .st-key-control_card h3 {
+                color: #0D5257;
+                font-size: 1.4rem;
+                font-weight: 800;
+                margin: 0 0 0.3rem 0;
+                letter-spacing: -0.02em;
+            }
+
+            .st-key-control_card em {
+                color: #64748B;
+                font-size: 1rem;
+                display: block;
+                margin-bottom: 0.8rem;
             }
 
             /* Reduce gap inside the form container slightly for better cohesion */
@@ -754,14 +821,28 @@ def inject_styles(theme):
                 filter: brightness(1.08);
             }
 
-            .st-key-score_panel div[data-testid="stVerticalBlockBorderWrapper"],
             .st-key-chart_panel div[data-testid="stVerticalBlockBorderWrapper"] {
+                height: 100%;
+            }
+
+            .st-key-score_panel div[data-testid="stVerticalBlockBorderWrapper"] {
+                overflow: hidden !important;
                 height: 100%;
             }
 
             /* Align score chart with climate chart (offset for tab bar) */
             .st-key-score_panel .stPlotlyChart {
-                padding-top: 49px;
+                margin-top: 49px;
+                overflow: hidden !important;
+            }
+            
+            .st-key-score_panel {
+                overflow: hidden !important;
+            }
+
+            .st-key-score_panel iframe,
+            .st-key-score_panel div[data-testid="stVerticalBlock"] {
+                overflow: hidden !important;
             }
 
             div[data-testid="stExpander"] {
@@ -1120,12 +1201,13 @@ def run_analysis(city, activity, decision_mode, selected_hour=None):
     ml_error = None
     # Si el modelo falta o falla, la app conserva la experiencia con reglas.
     if ml_model_available:
-        try:
-            X_ml = prepare_ml_features(df_valid_hours, activity, city)
-            df_valid_hours["recommendation_ml"] = ml_model.predict(X_ml)
-        except Exception as exc:
-            ml_model_available = False
-            ml_error = str(exc)
+        with st.spinner("🤖 Aplicando inteligencia artificial a las condiciones climáticas..."):
+            try:
+                X_ml = prepare_ml_features(df_valid_hours, activity, city)
+                df_valid_hours["recommendation_ml"] = ml_model.predict(X_ml)
+            except Exception as exc:
+                ml_model_available = False
+                ml_error = str(exc)
 
     source_recommendation_column = (
         "recommendation_ml" if ml_model_available else "recommendation"
@@ -1526,24 +1608,96 @@ def render_search_area():
     st.markdown('<div id="elegir-actividad"></div>', unsafe_allow_html=True)
     render_section_header(
         "Prepara tu consulta",
-        "Selecciona ciudad, actividad y modo de decision para generar una recomendacion.",
+        "Introduce una ciudad, actividad y modo de decision para generar una recomendacion.",
     )
     with st.container(border=True, key="control_card"):
-        city_options = get_city_catalog_options()
-        selected_city_label = st.selectbox(
-            "Ciudad",
-            options=list(city_options.keys()),
-            index=None,
-            placeholder="Selecciona una ciudad",
+        # Campo de búsqueda de ciudad con mejor UX
+        st.markdown("### 🌍 ¿Dónde estás?")
+        st.markdown("_Escribe el nombre de cualquier ciudad del mundo_")
+        
+        city_search = st.text_input(
+            "Buscar ciudad",
+            placeholder="Ejemplo: Madrid, New York, Tokyo, Buenos Aires...",
+            key="city_search_input",
+            label_visibility="collapsed",
+            help="Busca tu ciudad escribiendo su nombre. La búsqueda es automática y encontrará resultados en todo el mundo.",
         )
-
-        if selected_city_label:
-            if st.session_state.get("last_selected_city") != selected_city_label:
-                # Las ciudades internas ya incluyen coordenadas, timezone y metadata
-                # del entrenamiento, asi se evita geocoding ambiguo.
-                st.session_state.selected_city = city_options[selected_city_label].copy()
-                st.session_state.last_selected_city = selected_city_label
-                st.session_state.analysis = None
+        
+        # Realizar búsqueda y seleccionar automáticamente si hay texto
+        if city_search and len(city_search) >= 2:
+            search_results = search_city(city_search, count=1)
+            
+            if search_results:
+                # Tomar el primer resultado automáticamente
+                result = search_results[0]
+                city_name = result.get("name", "")
+                country = result.get("country", "")
+                admin1 = result.get("admin1", "")
+                
+                # Crear label único
+                label = f"{city_name}, {country}"
+                if admin1:
+                    label = f"{city_name} ({admin1}), {country}"
+                
+                # Actualizar automáticamente la ciudad seleccionada
+                if st.session_state.get("last_selected_city") != label:
+                    st.session_state.selected_city = {
+                        "city": city_name,
+                        "country": country,
+                        "latitude": result.get("latitude"),
+                        "longitude": result.get("longitude"),
+                        "timezone": result.get("timezone", "UTC"),
+                        "admin1": admin1,
+                    }
+                    st.session_state.last_selected_city = label
+                    st.session_state.analysis = None
+                
+                # Mostrar ciudad seleccionada con diseño mejorado
+                st.markdown(f"""
+                    <div style="padding: 1rem; background: linear-gradient(135deg, #D4F1F4 0%, #B5E7EB 100%); 
+                         border-radius: 12px; border-left: 4px solid #2DB5A0; margin: 0.5rem 0;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #0D5257;">
+                            ✓ ¡Perfecto! Ciudad encontrada
+                        </div>
+                        <div style="font-size: 1rem; color: #1A6B74; margin-top: 0.3rem;">
+                            📍 {label}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                    <div style="padding: 1rem; background: #FFF4E6; border-radius: 12px; 
+                         border-left: 4px solid #FF9800; margin: 0.5rem 0;">
+                        <div style="font-size: 1rem; color: #E65100;">
+                            🔍 No encontramos "{city_search}". Prueba con:
+                        </div>
+                        <ul style="margin: 0.5rem 0 0 1.2rem; color: #E65100;">
+                            <li>Escribir el nombre completo de la ciudad</li>
+                            <li>Verificar la ortografía</li>
+                            <li>Probar con el nombre en inglés</li>
+                        </ul>
+                    </div>
+                """, unsafe_allow_html=True)
+        elif city_search and len(city_search) < 2:
+            st.markdown("""
+                <div style="padding: 0.8rem; background: #E3F2FD; border-radius: 10px; 
+                     border-left: 4px solid #2196F3; margin: 0.5rem 0;">
+                    <span style="font-size: 1rem; color: #1565C0;">
+                        💡 Escribe al menos 2 letras para comenzar la búsqueda
+                    </span>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        # Mostrar ciudad actualmente seleccionada si existe
+        if st.session_state.get("last_selected_city") and not city_search:
+            st.markdown(f"""
+                <div style="padding: 0.9rem; background: #F0F9FF; border-radius: 10px; 
+                     border: 2px dashed #38BDF8; margin: 0.5rem 0;">
+                    <span style="font-size: 1rem; color: #0369A1; font-weight: 600;">
+                        📍 Ciudad seleccionada: {st.session_state.last_selected_city}
+                    </span>
+                </div>
+            """, unsafe_allow_html=True)
 
         activity_col, mode_col = st.columns([1, 1])
         with activity_col:
@@ -1606,7 +1760,6 @@ def render_results(theme):
     city_name = analysis["city_name"]
     df_valid_hours = analysis["valid_hours"]
     top_hours = analysis["top_hours"]
-    settings = analysis["settings"]
     ml_model_available = analysis.get("ml_model_available", False)
     ml_model_missing = analysis.get("ml_model_missing", False)
     ml_error = analysis.get("ml_error")
